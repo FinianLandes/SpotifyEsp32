@@ -49,11 +49,15 @@ class Spotify {
     String current_track_id();
     String current_device_id();
     String current_artist_names();
+    bool is_playing();
     String convert_id_to_uri(String id, String type);
 
   private:
     bool get_token();
     void init_response(response* response_obj);
+    response RestApiGet(char rest_url[100]);
+    response RestApiPut(char rest_url[100]);
+    response RestApiPost(char rest_url[100]);
     char* _refresh_token;
     char* _redirect_uri;
     char* _client_id;
