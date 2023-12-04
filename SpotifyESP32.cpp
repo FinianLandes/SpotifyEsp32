@@ -12,6 +12,7 @@ namespace Spotify_types{
   String TYPE_PLAYLIST = "playlist";
 }
 
+
 Spotify::Spotify(char* refresh_token, char* redirect_uri, char* client_id, char* client_secret,bool debug_on){
   _retry = 0;
   _refresh_token = refresh_token;
@@ -20,19 +21,23 @@ Spotify::Spotify(char* refresh_token, char* redirect_uri, char* client_id, char*
   _client_secret = client_secret;
   _debug_on = debug_on;
 }
-response Spotify::currently_playing(){
+
+
+response Spotify::RestApiGet(char rest_url[_size_of_possibly_large_char]){
   response response_obj;
   init_response(&response_obj);
+
   HTTPClient http;
-  http.begin("https://api.spotify.com/v1/me/player/currently-playing",_spotify_root_ca);
+  http.begin(rest_url,_spotify_root_ca);
   http.addHeader("Accept", "application/json");
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization","Bearer "+String(_access_token));
- 
   int http_code = http.GET();
+
   response_obj.status_code = http_code;
+
   if(_debug_on){
-    Serial.print("GET currently_playing status: ");
+    Serial.print("GET status: ");
     Serial.println(http_code);
     Serial.print(" Reply: ");
     Serial.println(http.getString());
@@ -49,590 +54,253 @@ response Spotify::currently_playing(){
   }
   http.end();
   _retry = 0;
+
   return response_obj;
-  
 }
-response Spotify::current_playback_state(){
+response Spotify::RestApiPut(char rest_url[100], String payload){
   response response_obj;
   init_response(&response_obj);
+
   HTTPClient http;
-  http.begin("https://api.spotify.com/v1/me/player",_spotify_root_ca);
+  http.begin(rest_url,_spotify_root_ca);
   http.addHeader("Accept", "application/json");
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization","Bearer "+String(_access_token));
- 
-  int http_code = http.GET();
+
+  http.addHeader("content-Length", String(payload.length()));
+  int http_code=http.PUT(payload);
+
   response_obj.status_code = http_code;
+  String reply = "";
+  DynamicJsonDocument doc(2000);
+
+  if(http.getSize()>0){
+    reply = http.getString();
+    deserializeJson(doc, reply);
+  }
+
   if(_debug_on){
-    Serial.print("GET current_playback_state status: ");
+    //TODO: Add rexex ([^\/]+$) to extract last text (pause/play etc.) from uri and put into debug info
+    Serial.print("PUT status: ");
     Serial.println(http_code);
     Serial.print(" Reply: ");
-    Serial.println(http.getString());
+    Serial.println(reply);
   }
-  if ((http_code >=200)&&(http_code<=299)){
-    String response = http.getString();
-    response_obj.reply = response;
+  if ((http_code >= 200)&&(http_code <= 299)){
+    response_obj.reply = "Success";    
   }
   else if(_retry<=3){
-    _retry++;
-    if(get_token()){
-      response_obj = current_playback_state();
+    String message = doc["error"]["message"].as<String>();
+    if(message == "Only valid bearer authentication supported"){
+      _retry++;
+      if(get_token()){
+        response_obj = RestApiPut(rest_url);
+      }
+    }
+    else{
+      response_obj.reply = message;
     }
   }
   http.end();
   _retry = 0;
-  return response_obj;
 
+  return response_obj;
 }
-response Spotify::play_uri(String track_uri){
+response Spotify::RestApiPost(char rest_url[100], String payload){
   response response_obj;
   init_response(&response_obj);
 
   HTTPClient http;
-  http.begin("https://api.spotify.com/v1/me/player/play",_spotify_root_ca);
+  http.begin(rest_url,_spotify_root_ca);
   http.addHeader("Accept", "application/json");
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization","Bearer "+String(_access_token));
+
+  
+  http.addHeader("content-Length", String(payload.length()));
+  int http_code=http.POST(payload);
+
+  response_obj.status_code = http_code;
+  String reply = "";
+  DynamicJsonDocument doc(2000);
+
+  if(http.getSize()>0){
+    reply = http.getString();
+    deserializeJson(doc, reply);
+  }
+
+  if(_debug_on){
+    //TODO: Add rexex ([^\/]+$) to extract last text (pause/play etc.) from uri and put into debug info
+    Serial.print("PUT start_playback status: ");
+    Serial.println(http_code);
+    Serial.print(" Reply: ");
+    Serial.println(reply);
+  }
+  if ((http_code >= 200)&&(http_code <= 299)){
+    response_obj.reply = "Success";    
+  }
+  else if(_retry<=3){
+    String message = doc["error"]["message"].as<String>();
+    if(message == "Only valid bearer authentication supported"){
+      _retry++;
+      if(get_token()){
+        response_obj = RestApiPost(rest_url);
+      }
+    }
+    else{
+      response_obj.reply = message;
+    }
+  }
+  http.end();
+  _retry = 0;
+
+  return response_obj;
+}
+//Untested
+response Spotify::RestApiDelete(char rest_url[100], String payload){
+  response response_obj;
+  init_response(&response_obj);
+
+  HTTPClient http;
+  http.begin(rest_url, _spotify_root_ca);
+  http.addHeader("Accept", "application/json");
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", "Bearer " + String(_access_token));
+
+  int http_code = http.sendRequest("DELETE", payload); 
+
+  response_obj.status_code = http_code;
+  String reply = "";
+  DynamicJsonDocument doc(2000);
+
+  if (http.getSize() > 0) {
+    reply = http.getString();
+    deserializeJson(doc, reply);
+  }
+
+  if (_debug_on) {
+    // TODO: Add regex ([^\/]+$) to extract last text (pause/play etc.) from uri and put into debug info
+    Serial.print("DELETE status: ");
+    Serial.println(http_code);
+    Serial.print(" Reply: ");
+    Serial.println(reply);
+  }
+
+  if ((http_code >= 200) && (http_code <= 299)) {
+    response_obj.reply = "Success";
+  } else if (_retry <= 3) {
+    String message = doc["error"]["message"].as<String>();
+    if (message == "Only valid bearer authentication supported") {
+      _retry++;
+      if (get_token()) {
+        response_obj = RestApiDelete(rest_url); 
+      }
+    } else {
+      response_obj.reply = message;
+    }
+  }
+
+  http.end();
+  _retry = 0;
+
+  return response_obj;
+
+}
+//Player
+response Spotify::currently_playing(){
+  char link[] = "https://api.spotify.com/v1/me/player/currently-playing";
+  return RestApiGet(link);
+}
+response Spotify::current_playback_state(){
+  char link[] = "https://api.spotify.com/v1/me/player";
+  return RestApiGet(link);
+}
+response Spotify::play_uri(String track_uri){
+  char link[] = "https://api.spotify.com/v1/me/player/play";
+  
   String payload;
   if(track_uri.startsWith("spotify:track:")){
-    payload= "{\"uris\":[\"" + track_uri + "\"]}";
+    payload = "{\"uris\":[\"" + track_uri + "\"]}";
   }
   else{
     payload = "{\"context_uri\":\"" + track_uri + "\",\"offset\":{\"position\":0}}";
   }
-  http.addHeader("content-Length", String(payload.length()));
-  int http_code=http.PUT(payload);
-
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
-  
-  
-  if(_debug_on){
-    Serial.print("PUT play status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = play_uri(track_uri);
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiPut(link, payload);
 }
 response Spotify::start_playback(){
-  response response_obj;
-  init_response(&response_obj);
+  char url[] = "https://api.spotify.com/v1/me/player/play";
 
-  HTTPClient http;
-  http.begin("https://api.spotify.com/v1/me/player/play",_spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
-
-  String payload= "";
-  http.addHeader("content-Length", String(payload.length()));
-  int http_code=http.PUT(payload);
-
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
-  
-  
-  if(_debug_on){
-    Serial.print("PUT start_playback status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = start_playback();
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiPut(url);
 }
 response Spotify::pause_playback(){
-  response response_obj;
-  init_response(&response_obj);
+  char url[] = "https://api.spotify.com/v1/me/player/pause";
 
-  HTTPClient http;
-  http.begin("https://api.spotify.com/v1/me/player/pause",_spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
-
-  String payload= "";
-  http.addHeader("content-Length", String(payload.length()));
-  int http_code=http.PUT(payload);
-
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
-  
-  
-  if(_debug_on){
-    Serial.print("PUT pause status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = pause_playback();
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
-
+  return RestApiPut(url);
 }
 response Spotify::skip(){
-  response response_obj;
-  init_response(&response_obj);
-  String url = "https://api.spotify.com/v1/me/player/next";
+  char url[] = "https://api.spotify.com/v1/me/player/next";
 
-  HTTPClient http;
-  http.begin(url, _spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
-
-  String payload= "";
-  http.addHeader("content-Length", String(payload.length()));
-  int http_code=http.POST(payload);
-
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
-  
-  if(_debug_on){
-    Serial.print("PUT skip status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = skip();
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiPost(url);
 }
 response Spotify::previous(){
-  response response_obj;
-  init_response(&response_obj);
-  String url = "https://api.spotify.com/v1/me/player/previous";
-
-  HTTPClient http;
-  http.begin(url, _spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
-
-  String payload= "";
-  http.addHeader("content-Length", String(payload.length()));
-  int http_code=http.POST(payload);
-
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
+  char url[] = "https://api.spotify.com/v1/me/player/previous";
   
-  if(_debug_on){
-    Serial.print("PUT previous status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = previous();
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiPost(url);
 
 }
 response Spotify::available_devices(){
-  response response_obj;
-  init_response(&response_obj);
-  HTTPClient http;
-  http.begin("https://api.spotify.com/v1/me/player/devices",_spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
- 
-  int http_code = http.GET();
-  response_obj.status_code = http_code;
-  if(_debug_on){
-    Serial.print("GET current_device status: ");
-    Serial.println(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(http.getString());
-  }
-  if ((http_code >=200)&&(http_code<=299)){
-    String response = http.getString();
-    response_obj.reply = response;
-  }
-  else if(_retry<=3){
-    _retry++;
-    if(get_token()){
-      response_obj = available_devices();
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  char url[] = "https://api.spotify.com/v1/me/player/previous";
+
+  return RestApiGet(url);
 }
 response Spotify::recently_played_tracks(int limit){
-  response response_obj;
-  init_response(&response_obj);
-  HTTPClient http;
   String url = "https://api.spotify.com/v1/me/player/recently-played";
   url += "?limit="+String(limit);
-  http.begin(url,_spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
- 
-  int http_code = http.GET();
-  response_obj.status_code = http_code;
-  String response = http.getString();
-  if(_debug_on){
-    Serial.print("GET recently_played_tracks status: ");
-    Serial.println(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(response);
-  }
-  if ((http_code >=200)&&(http_code<=299)){
-    
-    response_obj.reply = response;
-  }
-  else if(_retry<=3){
-    _retry++;
-    if(get_token()){
-      response_obj = recently_played_tracks(limit);
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
+
+  return RestApiGet(url_char_array);
 }
 response Spotify::get_queue(){
-  response response_obj;
-  init_response(&response_obj);
-  HTTPClient http;
-  http.begin("https://api.spotify.com/v1/me/player/queue",_spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
+  char url[] = "https://api.spotify.com/v1/me/player/queue";
  
-  int http_code = http.GET();
-  response_obj.status_code = http_code;
-  if(_debug_on){
-    Serial.print("GET get_queue status: ");
-    Serial.println(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(http.getString());
-  }
-  if ((http_code >=200)&&(http_code<=299)){
-    String response = http.getString();
-    response_obj.reply = response;
-  }
-  else if(_retry<=3){
-    _retry++;
-    if(get_token()){
-      response_obj = get_queue();
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiGet(url);
 }
 response Spotify::transfer_playback(String device_id){
-  response response_obj;
-  init_response(&response_obj);
-
-  HTTPClient http;
-  http.begin("https://api.spotify.com/v1/me/player",_spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
-
+  char url[] = "https://api.spotify.com/v1/me/player";
   String payload= "{\"device_ids\":[\"" + device_id + "\"]}";
-
-  int http_code=http.PUT(payload);
-
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
   
-  if(_debug_on){
-    Serial.print("PUT play status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = transfer_playback(device_id);
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiPut(url, payload);
 }
 response Spotify::seek_to_position(int time_ms){
-  response response_obj;
-  init_response(&response_obj);
   String url = "https://api.spotify.com/v1/me/player/seek";
   url += "?position_ms="+String(time_ms);
 
-  HTTPClient http;
-  http.begin(url, _spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
 
-  String payload= "";
-  http.addHeader("content-Length", String(payload.length()));
-  int http_code=http.PUT(payload);
-
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
-  
-  if(_debug_on){
-    Serial.print("PUT seek_to_position status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = seek_to_position(time_ms);
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiPut(url_char_array);
 }
 response Spotify::repeat_mode(String mode){
-  response response_obj;
-  init_response(&response_obj);
   String url = "https://api.spotify.com/v1/me/player/repeat";
   url += "?state="+mode;
 
-  HTTPClient http;
-  http.begin(url, _spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
 
-  String payload= "";
-  http.addHeader("content-Length", String(payload.length()));
-  int http_code=http.PUT(payload);
-
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
-  
-  if(_debug_on){
-    Serial.print("PUT repeat status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = repeat_mode(mode);
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiPut(url_char_array);
 }
 response Spotify::set_volume(int value){
-  response response_obj;
-  init_response(&response_obj);
   String url = "https://api.spotify.com/v1/me/player/volume";
   url += "?volume_percent="+String(value);
 
-  HTTPClient http;
-  http.begin(url, _spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
 
-  String payload= "";
-  http.addHeader("content-Length", String(payload.length()));
-  int http_code=http.PUT(payload);
-
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
-  
-  if(_debug_on){
-    Serial.print("PUT set_volume status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = set_volume(value);
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiPut(url_char_array);
 }
 response Spotify::shuffle(bool mode){
-  response response_obj;
-  init_response(&response_obj);
   String state;
   if(mode){
     state = "true";
@@ -643,50 +311,10 @@ response Spotify::shuffle(bool mode){
   String url = "https://api.spotify.com/v1/me/player/shuffle";
   url += "?state=" + state;
 
-  HTTPClient http;
-  http.begin(url, _spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
 
-  String payload= "";
-  http.addHeader("content-Length", String(payload.length()));
-
-  int http_code=http.PUT(payload);
-  
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
-
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
-  
-  if(_debug_on){
-    Serial.print("PUT shuffle status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = shuffle(mode);
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiPut(url_char_array);
 }
 response Spotify::add_to_queue(String context_uri){
   response response_obj;
@@ -694,49 +322,80 @@ response Spotify::add_to_queue(String context_uri){
   String url = "https://api.spotify.com/v1/me/player/queue";
   url += "?uri="+urlEncode(context_uri);
 
-  HTTPClient http;
-  http.begin(url, _spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+String(_access_token));
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
 
-  String payload= "";
-  http.addHeader("content-Length", String(payload.length()));
-  int http_code=http.POST(payload);
+  return RestApiPut(url_char_array);
+}
+//Albums
+response Spotify::get_album(String id){
+  String url = "https://api.spotify.com/v1/albums";
+  url += "/" + id;
 
-  response_obj.status_code = http_code;
-  String reply = "";
-  DynamicJsonDocument doc(2000);
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
 
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
-  }
-  
-  if(_debug_on){
-    Serial.print("PUT add_to_queue status: ");
-    Serial.print(http_code);
-    Serial.print(" Reply: ");
-    Serial.println(reply);
-  }
-  if ((http_code >= 200)&&(http_code <= 299)){
-    response_obj.reply = "Success";    
-  }
-  else if(_retry<=3){
-    String message = doc["error"]["message"].as<String>();
-    if(message == "Only valid bearer authentication supported"){
-      _retry++;
-      if(get_token()){
-        response_obj = add_to_queue(context_uri);
-      }
-    }
-    else{
-      response_obj.reply = message;
-    }
-  }
-  http.end();
-  _retry = 0;
-  return response_obj;
+  return RestApiGet(url_char_array);
+}
+response Spotify::get_albums(String ids){
+  String url = "https://api.spotify.com/v1/albums";
+  url  += "?ids=" + ids;
+
+  char url_char_array[_size_of_possibly_large_char]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
+
+  return RestApiGet(url_char_array);
+
+}
+response Spotify::get_album_tracks(String id, int limit, int offset){
+  String url = "https://api.spotify.com/v1/albums/";
+  url += id + "/tracks?limit=" + String(limit) + "&offset=" + String(offset);
+
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
+
+  return RestApiGet(url_char_array);
+
+}
+response Spotify::get_users_saved_albums(int limit, int offset){
+  String url = "https://api.spotify.com/v1/me/albums";
+  url += "?limit=" + String(limit) + "&offset=" + String(offset);
+
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
+
+  return RestApiPut(url_char_array);
+
+}
+response Spotify::save_albums_for_current_user(String ids){
+  char url[] = "https://api.spotify.com/v1/me/albums";
+  String json = comma_separated_string_to_json(ids);
+
+  return RestApiPut(url, json);
+}
+response Spotify::remove_users_saved_albums(String ids){
+  char url[] = "https://api.spotify.com/v1/me/albums";
+  String json = comma_separated_string_to_json(ids);
+
+  return RestApiDelete(url, json);
+}
+response Spotify::check_useres_saved_albums(String ids){
+  String url = "https://api.spotify.com/v1/me/albums/contains";
+  url  += "?ids=" + ids;
+
+  char url_char_array[_size_of_possibly_large_char]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
+
+  return RestApiGet(url_char_array);
+}
+response Spotify::get_new_releases(String country, int limit, int offset){
+  String url = "https://api.spotify.com/v1/browse/new-releases";
+  url  += "?country=" + country + "&limit=" + String(limit) + "&offset=" + String(offset);
+
+  char url_char_array[100]; 
+  url.toCharArray(url_char_array, sizeof(url_char_array));
+
+  return RestApiGet(url_char_array);
 }
 void Spotify::init_response(response* response_obj){
   response_obj -> status_code = -1;
@@ -836,7 +495,21 @@ String Spotify::current_artist_names(){
   }
   return artist_names;
 }
+bool Spotify::is_playing(){
+  bool is_playing = true;
+  response data = currently_playing();
+  if((data.status_code>=200)&&(data.status_code<=299)){
+    DynamicJsonDocument doc(10000);
+    deserializeJson(doc,data.reply);
+    is_playing = doc["is_playing"].as<bool>();
+  }
+  return is_playing;
+}
 String Spotify::convert_id_to_uri(String id, String type){
   String uri = "spotify:"+type+":"+id;
   return uri;
+}
+String Spotify::comma_separated_string_to_json(String list){
+  //TODO
+  return list;
 }
