@@ -1,9 +1,8 @@
 # Spotify_Esp32
-TODO:
--Comma seperated list to Json, As public Function
--Better debugging regex
+TODO:<br />
+-Better debugging regex<br />
 
-Optional:
--Get rid of Strings
--Self diagnosis
+Optional:<br />
+-Get rid of Strings<br />
+-Self diagnosis<br />
 
