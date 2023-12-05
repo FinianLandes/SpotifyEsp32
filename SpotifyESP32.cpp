@@ -208,15 +208,15 @@ response Spotify::RestApiDelete(char rest_url[100], String payload){
 }
 //Player
 response Spotify::currently_playing(){
-  char link[] = "https://api.spotify.com/v1/me/player/currently-playing";
-  return RestApiGet(link);
+  char url[] = "https://api.spotify.com/v1/me/player/currently-playing";
+  return RestApiGet(url);
 }
 response Spotify::current_playback_state(){
-  char link[] = "https://api.spotify.com/v1/me/player";
-  return RestApiGet(link);
+  char url[] = "https://api.spotify.com/v1/me/player";
+  return RestApiGet(url);
 }
 response Spotify::play_uri(String track_uri){
-  char link[] = "https://api.spotify.com/v1/me/player/play";
+  char url[] = "https://api.spotify.com/v1/me/player/play";
   
   String payload;
   if(track_uri.startsWith("spotify:track:")){
@@ -225,7 +225,7 @@ response Spotify::play_uri(String track_uri){
   else{
     payload = "{\"context_uri\":\"" + track_uri + "\",\"offset\":{\"position\":0}}";
   }
-  return RestApiPut(link, payload);
+  return RestApiPut(url, payload);
 }
 response Spotify::start_playback(){
   char url[] = "https://api.spotify.com/v1/me/player/play";
@@ -249,7 +249,7 @@ response Spotify::previous(){
 
 }
 response Spotify::available_devices(){
-  char url[] = "https://api.spotify.com/v1/me/player/previous";
+  char url[] = "https://api.spotify.com/v1/me/player/devices";
 
   return RestApiGet(url);
 }
@@ -320,12 +320,12 @@ response Spotify::add_to_queue(String context_uri){
   response response_obj;
   init_response(&response_obj);
   String url = "https://api.spotify.com/v1/me/player/queue";
-  url += "?uri="+urlEncode(context_uri);
+  url += "?uri="+context_uri;
 
   char url_char_array[100]; 
   url.toCharArray(url_char_array, sizeof(url_char_array));
 
-  return RestApiPut(url_char_array);
+  return RestApiPost(url_char_array);
 }
 //Albums
 response Spotify::get_album(String id){
@@ -364,20 +364,18 @@ response Spotify::get_users_saved_albums(int limit, int offset){
   char url_char_array[100]; 
   url.toCharArray(url_char_array, sizeof(url_char_array));
 
-  return RestApiPut(url_char_array);
+  return RestApiGet(url_char_array);
 
 }
 response Spotify::save_albums_for_current_user(String ids){
   char url[] = "https://api.spotify.com/v1/me/albums";
-  String json = comma_separated_string_to_json(ids);
 
-  return RestApiPut(url, json);
+  return RestApiPut(url, ids);
 }
 response Spotify::remove_users_saved_albums(String ids){
   char url[] = "https://api.spotify.com/v1/me/albums";
-  String json = comma_separated_string_to_json(ids);
 
-  return RestApiDelete(url, json);
+  return RestApiDelete(url, ids);
 }
 response Spotify::check_useres_saved_albums(String ids){
   String url = "https://api.spotify.com/v1/me/albums/contains";
@@ -509,7 +507,21 @@ String Spotify::convert_id_to_uri(String id, String type){
   String uri = "spotify:"+type+":"+id;
   return uri;
 }
-String Spotify::comma_separated_string_to_json(String list){
-  //TODO
-  return list;
+
+String Spotify::comma_separated_string_to_json(String list) {
+  DynamicJsonDocument doc(512);
+  String token;
+  int pos = 0;
+
+  while ((pos = list.indexOf(',')) != -1) {
+    token = list.substring(0, pos);
+    doc.add(token);
+    list.remove(0, pos + 1);
+  }
+
+  doc.add(list);
+
+  String list_doc;
+  serializeJson(doc, list_doc);
+  return list_doc;
 }
