@@ -13,14 +13,42 @@ char* refresh_token="AQAichrGMfjjDHYWIAENJYyWoi_KpzLZ93_HSS30J8zULeuHRPmF9-Wh3aS
 
 using namespace Spotify_types;
 
-Spotify sp(refresh_token, redirect_uri, client_id, client_secret, true);
+Spotify sp(refresh_token, redirect_uri, client_id, client_secret, false);
 String song_id = "2NTCi4wGypj56t843jb3Mt";
+String track_id = "2NTCi4wGypj56t843jb3Mt";
+String track_ids = "7ouMYWpwJ422jRcDASZB7P,4VqPOruhp5EdPBeR92t6lQ,2takcwOaAZWiXQijPHIx7B";
+
 String album_id = "7iLuHJkrb9KHPkMgddYigh";
 String album_ids = "7iLuHJkrb9KHPkMgddYigh,4KAtLRVIfB0bKnRY01dveY,2SxoeF005n621Jca66RRdu";
+
+String artist_id = "7orlzf5LTqSnCzURkZFebN";
+String artist_ids = "7orlzf5LTqSnCzURkZFebN,0lNJF6sbrXXPubqKkkyK23,3JsMj0DEzyWc0VDlHuy9Bx";
+
+String audiobook_id = "18yVqkdbdRvS24c0Ilj2ci";
+String audiobook_ids = "18yVqkdbdRvS24c0Ilj2ci,1HGw3J3NxZO1TP1BTtVhpZ,7iHfbu1YPACw6oZPAFJtqe";
+
+String country = "CH";
+String locale  = "de_CH";
+String category_id = "dinner";
+
+String episode_id = "77o6BIVlYM3msb4MMIL1jH";
+String episode_ids = "77o6BIVlYM3msb4MMIL1jH,0Q86acNRm6V9GYx55SXKwf";
+
+String playlist_id = "6lGlX7KRHmy6AuF5NFT0TW";
+String fields = "items(track(name,href,album(name,href)))";
+String uris_array = "";
+
+String user_id = "chaerne";
+
+String show_id = "5CfCWKI5pZ28U0uOzXkDHe";
+String show_ids = "5CfCWKI5pZ28U0uOzXkDHe,5as3aKmN2k11yfDDDSrvaZ";
+
+String artist_user_ids = "2CIMQHirSU0MQqyYHq0eOx,57dN52uHvrHOxijzpIgu3E,1vCWHaC5f2uS3yhpwWbIA6";
+
 void setup() {
   Serial.begin(9600);
   connectToWifi();
-
+  test_search();
 }
 
 void loop() {
@@ -111,4 +139,198 @@ void test_albums(){
 
   Serial.print("Get Releases: ");
   print_response(sp.get_new_releases("CH", 1, 0));
+}
+void test_artist(){
+  Serial.println("Get Artist: ");
+  print_response(sp.get_artist(artist_id));
+  Serial.println("Get Artists: ");
+  print_response(sp.get_several_artists(artist_ids));
+  Serial.println("Get Artist Albums: ");
+  print_response(sp.get_artist_albums(artist_id, GROUP_ALBUM +","+GROUP_SINGLE, 1, 0));
+  Serial.println("Get Artist top Tracks: ");
+  print_response(sp.get_artist_top_tracks(artist_id));
+  Serial.println("Get Artists related artists: ");
+  print_response(sp.get_artist_related_artist(artist_id));
+}
+void test_audiobooks(){
+  Serial.println("Get Audibook: ");
+  print_response(sp.get_audiobook(audiobook_id));
+  Serial.println("Get Audibooks: ");
+  print_response(sp.get_several_audiobooks(audiobook_ids));
+  Serial.println("Get Audibook Chapters: ");
+  print_response(sp.get_audiobook_chapters(audiobook_id, 1, 0));
+  Serial.println("Get Users Audibooks: ");
+  print_response(sp.get_users_audiobooks(0, 1));
+  Serial.println("Save Audibook for user: ");
+  print_response(sp.save_audiobooks_for_current_user(audiobook_ids));
+  Serial.println("Check audiobooks: ");
+  print_response(sp.check_users_saved_audiobooks(audiobook_ids));
+  Serial.println("Remove Audiobooks: ");
+  print_response(sp.remove_audiobooks_for_current_user(audiobook_ids));
+}
+void test_categories(){
+  Serial.println("get_several_browse_categories: ");
+  print_response(sp.get_several_browse_categories(country, locale));
+
+  Serial.println("get_single_browse_category: ");
+  print_response(sp.get_single_browse_category(category_id, country, locale));
+}
+void test_episodes(){
+  Serial.println("get_episode: ");
+  print_response(sp.get_episode(episode_id));
+
+  Serial.println("get_several_episodes: ");
+  print_response(sp.get_several_episodes(episode_ids));
+
+  Serial.println("get_users_saved_episodes: ");
+  print_response(sp.get_users_saved_episodes());
+
+  // NOT WORKING
+  Serial.println("save_episodes_for_current_user: ");
+  print_response(sp.save_episodes_for_current_user(sp.comma_separated_string_to_json(episode_ids)));
+
+  Serial.println("check_users_saved_episodes: ");
+  print_response(sp.check_users_saved_episodes(episode_ids));
+
+  Serial.println("remove_episodes_for_current_user: ");
+  print_response(sp.remove_episodes_for_current_user(sp.comma_separated_string_to_json(episode_ids)));
+
+
+}
+void test_genres(){
+  Serial.println("get_available_genre_seeds: ");
+  print_response(sp.get_available_genre_seeds());
+}
+void test_markets(){
+  Serial.println("get_available_markets: ");
+  print_response(sp.get_available_markets());
+}
+void test_playlist(){
+  Serial.println("get_playlist: ");
+  print_response(sp.get_playlist(playlist_id, fields));
+  //Not working
+  Serial.println("change_playlist_details: ");
+  print_response(sp.change_playlist_details(playlist_id, "Hello", false, false, "WTF!!"));
+
+  Serial.println("get_playlist_items: ");
+  print_response(sp.get_playlist_items(playlist_id, fields));
+  //Not working (missing part of implementation)
+  Serial.println("update_playlist_items: ");
+  print_response(sp.update_playlist_items(playlist_id, sp.convert_id_to_uri(song_id,TYPE_TRACK)));
+  //not working
+  Serial.println("add_items_to_playlist: ");
+  print_response(sp.add_items_to_playlist(playlist_id, sp.convert_id_to_uri(song_id,TYPE_TRACK), 1));
+  //Not working (missing part of implementation)
+  Serial.println("remove_playlist_items: ");
+  print_response(sp.remove_playlist_items(playlist_id, uris_array));
+
+  Serial.println("get_current_users_playlists: ");
+  print_response(sp.get_current_users_playlists());
+
+  Serial.println("get_user_playlists: ");
+  print_response(sp.get_user_playlists(user_id));
+
+  Serial.println("create_playlist: ");
+  print_response(sp.create_playlist(user_id, "Test", true, false, "no"));
+
+  Serial.println("get_featured_playlists: ");
+  print_response(sp.get_featured_playlists(country, locale, ""));
+
+  Serial.println("get_category_playlists: ");
+  print_response(sp.get_category_playlists("dinner", country));
+
+  Serial.println("get_playlist_cover_image: ");
+  print_response(sp.get_playlist_cover_image(playlist_id));
+
+  Serial.println("add_custom_playlist_cover_image: ");
+  print_response(sp.add_custom_playlist_cover_image(playlist_id, "/9j/2wCEABoZGSccJz4lJT5CLy8vQkc9Ozs9R0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0cBHCcnMyYzPSYmPUc9Mj1HR0dEREdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR//dAAQAAf/uAA5BZG9iZQBkwAAAAAH/wAARCAABAAEDACIAAREBAhEB/8QASwABAQAAAAAAAAAAAAAAAAAAAAYBAQAAAAAAAAAAAAAAAAAAAAAQAQAAAAAAAAAAAAAAAAAAAAARAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwAAARECEQA/AJgAH//Z"));
+
+}
+void test_search(){
+  Serial.println("search: ");
+  print_response(sp.search("hello+world", TYPE_TRACK));
+}
+void test_shows(){
+  Serial.println("get_show: ");
+  print_response(sp.get_show(show_id));
+
+  Serial.println("get_several_shows: ");
+  print_response(sp.get_several_shows(show_ids));
+
+  Serial.println("get_show_episodes: ");
+  print_response(sp.get_show_episodes(show_id));
+
+  Serial.println("get_users_saved_shows: ");
+  print_response(sp.get_users_saved_shows());
+
+  Serial.println("save_shows_for_current_user: ");
+  print_response(sp.save_shows_for_current_user(show_ids));
+
+  Serial.println("check_users_saved_shows: ");
+  print_response(sp.check_users_saved_shows(show_ids));
+
+  Serial.println("remove_shows_for_current_user: ");
+  print_response(sp.remove_shows_for_current_user(show_ids));
+
+
+}
+void test_tracks(){
+  Serial.println("get_track: ");
+  print_response(sp.get_track(track_id));
+
+  Serial.println("get_several_tracks: ");
+  print_response(sp.get_several_tracks(track_ids));
+
+  Serial.println("get_user_saved_tracks: ");
+  print_response(sp.get_user_saved_tracks());
+
+  Serial.println("save_tracks_for_current_user: ");
+  print_response(sp.save_tracks_for_current_user(sp.comma_separated_string_to_json(track_ids)));
+
+  Serial.println("remove_user_saved_tracks: ");
+  print_response(sp.remove_user_saved_tracks(sp.comma_separated_string_to_json(track_ids)));
+
+  Serial.println("check_user_saved_tracks: ");
+  print_response(sp.check_user_saved_tracks(track_ids));
+
+  Serial.println("get_tracks_audio_features: ");
+  print_response(sp.get_tracks_audio_features(track_ids));
+
+  Serial.println("get_track_audio_features: ");
+  print_response(sp.get_track_audio_features(track_id));
+
+  Serial.println("get_track_audio_analysis: ");
+  print_response(sp.get_track_audio_analysis(track_id));
+}
+void test_users(){
+  Serial.println("get_current_user_profile: ");
+  print_response(sp.get_current_user_profile());
+
+  Serial.println("get_user_top_items: ");
+  print_response(sp.get_user_top_items(TYPE_ARTIST, TIME_RANGE_MEDIUM));
+
+  Serial.println("get_user_profile: ");
+  print_response(sp.get_user_profile(user_id));
+
+  Serial.println("follow_playlist: ");
+  print_response(sp.follow_playlist(playlist_id, true));
+
+  Serial.println("unfollow_playlist: ");
+  print_response(sp.unfollow_playlist(playlist_id));
+
+  Serial.println("get_followed_artists: ");
+  print_response(sp.get_followed_artists(""));
+
+  Serial.println("follow_artists_or_users: ");
+  print_response(sp.follow_artists_or_users(TYPE_ARTIST, sp.comma_separated_string_to_json(artist_user_ids)));
+
+  Serial.println("unfollow_artists_or_users: ");
+  print_response(sp.unfollow_artists_or_users(TYPE_ARTIST, sp.comma_separated_string_to_json(artist_user_ids)));
+
+  Serial.println("check_if_user_follows_artists_or_users: ");
+  print_response(sp.check_if_user_follows_artists_or_users(TYPE_ARTIST, artist_user_ids));
+
+  Serial.println("check_if_users_follow_playlist: ");
+  print_response(sp.check_if_users_follow_playlist(playlist_id, user_id));
+
 }

@@ -10,6 +10,13 @@ namespace Spotify_types{
   String TYPE_ARTIST = "artist";
   String TYPE_TRACK = "track";
   String TYPE_PLAYLIST = "playlist";
+  String GROUP_ALBUM = "album";
+  String GROUP_SINGLE = "single";
+  String GROUP_APPEARS_ON = "appears_on";
+  String GROUP_COMPILATION = "compilation";
+  String TIME_RANGE_SHORT = "short_term";
+  String TIME_RANGE_MEDIUM = "medium_term";
+  String TIME_RANGE_LONG = "long_term";
 }
 
 
@@ -57,7 +64,7 @@ response Spotify::RestApiGet(char rest_url[_size_of_possibly_large_char]){
 
   return response_obj;
 }
-response Spotify::RestApiPut(char rest_url[100], String payload){
+response Spotify::RestApiPut(char rest_url[_size_of_possibly_large_char], String payload){
   response response_obj;
   init_response(&response_obj);
 
@@ -156,7 +163,6 @@ response Spotify::RestApiPost(char rest_url[100], String payload){
 
   return response_obj;
 }
-//Untested
 response Spotify::RestApiDelete(char rest_url[100], String payload){
   response response_obj;
   init_response(&response_obj);
@@ -206,6 +212,7 @@ response Spotify::RestApiDelete(char rest_url[100], String payload){
   return response_obj;
 
 }
+
 //Player
 response Spotify::currently_playing(){
   char url[] = "https://api.spotify.com/v1/me/player/currently-playing";
@@ -246,7 +253,6 @@ response Spotify::previous(){
   char url[] = "https://api.spotify.com/v1/me/player/previous";
   
   return RestApiPost(url);
-
 }
 response Spotify::available_devices(){
   char url[] = "https://api.spotify.com/v1/me/player/devices";
@@ -257,10 +263,7 @@ response Spotify::recently_played_tracks(int limit){
   String url = "https://api.spotify.com/v1/me/player/recently-played";
   url += "?limit="+String(limit);
 
-  char url_char_array[100]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiGet(url_char_array);
+  return RestApiGet(const_cast<char*>(url.c_str()));
 }
 response Spotify::get_queue(){
   char url[] = "https://api.spotify.com/v1/me/player/queue";
@@ -269,7 +272,7 @@ response Spotify::get_queue(){
 }
 response Spotify::transfer_playback(String device_id){
   char url[] = "https://api.spotify.com/v1/me/player";
-  String payload= "{\"device_ids\":[\"" + device_id + "\"]}";
+  String payload = "{\"device_ids\":[\"" + device_id + "\"]}";
   
   return RestApiPut(url, payload);
 }
@@ -277,28 +280,19 @@ response Spotify::seek_to_position(int time_ms){
   String url = "https://api.spotify.com/v1/me/player/seek";
   url += "?position_ms="+String(time_ms);
 
-  char url_char_array[100]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiPut(url_char_array);
+  return RestApiPut(const_cast<char*>(url.c_str()));
 }
 response Spotify::repeat_mode(String mode){
   String url = "https://api.spotify.com/v1/me/player/repeat";
   url += "?state="+mode;
 
-  char url_char_array[100]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiPut(url_char_array);
+  return RestApiPut(const_cast<char*>(url.c_str()));
 }
 response Spotify::set_volume(int value){
   String url = "https://api.spotify.com/v1/me/player/volume";
   url += "?volume_percent="+String(value);
 
-  char url_char_array[100]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiPut(url_char_array);
+  return RestApiPut(const_cast<char*>(url.c_str()));
 }
 response Spotify::shuffle(bool mode){
   String state;
@@ -311,10 +305,7 @@ response Spotify::shuffle(bool mode){
   String url = "https://api.spotify.com/v1/me/player/shuffle";
   url += "?state=" + state;
 
-  char url_char_array[100]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiPut(url_char_array);
+  return RestApiPut(const_cast<char*>(url.c_str()));
 }
 response Spotify::add_to_queue(String context_uri){
   response response_obj;
@@ -322,60 +313,44 @@ response Spotify::add_to_queue(String context_uri){
   String url = "https://api.spotify.com/v1/me/player/queue";
   url += "?uri="+context_uri;
 
-  char url_char_array[100]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiPost(url_char_array);
+  return RestApiPost(const_cast<char*>(url.c_str()));
 }
+
 //Albums
 response Spotify::get_album(String id){
-  String url = "https://api.spotify.com/v1/albums";
-  url += "/" + id;
+  String url = "https://api.spotify.com/v1/albums/";
+  url += id;
 
-  char url_char_array[100]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiGet(url_char_array);
+  return RestApiGet(const_cast<char*>(url.c_str()));
 }
 response Spotify::get_albums(String ids){
   String url = "https://api.spotify.com/v1/albums";
   url  += "?ids=" + ids;
 
-  char url_char_array[_size_of_possibly_large_char]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiGet(url_char_array);
+  return RestApiGet(const_cast<char*>(url.c_str()));
 
 }
 response Spotify::get_album_tracks(String id, int limit, int offset){
   String url = "https://api.spotify.com/v1/albums/";
   url += id + "/tracks?limit=" + String(limit) + "&offset=" + String(offset);
 
-  char url_char_array[100]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiGet(url_char_array);
-
+  return RestApiGet(const_cast<char*>(url.c_str()));
 }
 response Spotify::get_users_saved_albums(int limit, int offset){
   String url = "https://api.spotify.com/v1/me/albums";
   url += "?limit=" + String(limit) + "&offset=" + String(offset);
 
-  char url_char_array[100]; 
-  url.toCharArray(url_char_array, sizeof(url_char_array));
-
-  return RestApiGet(url_char_array);
-
+  return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::save_albums_for_current_user(String ids){
+response Spotify::save_albums_for_current_user(String ids_json){
   char url[] = "https://api.spotify.com/v1/me/albums";
 
-  return RestApiPut(url, ids);
+  return RestApiPut(url, ids_json);
 }
-response Spotify::remove_users_saved_albums(String ids){
+response Spotify::remove_users_saved_albums(String ids_json){
   char url[] = "https://api.spotify.com/v1/me/albums";
 
-  return RestApiDelete(url, ids);
+  return RestApiDelete(url, ids_json);
 }
 response Spotify::check_useres_saved_albums(String ids){
   String url = "https://api.spotify.com/v1/me/albums/contains";
@@ -390,10 +365,424 @@ response Spotify::get_new_releases(String country, int limit, int offset){
   String url = "https://api.spotify.com/v1/browse/new-releases";
   url  += "?country=" + country + "&limit=" + String(limit) + "&offset=" + String(offset);
 
-  char url_char_array[100]; 
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+
+//Artists
+response Spotify::get_artist(String id){
+  String url = "https://api.spotify.com/v1/artists/";
+  url  += id;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_several_artists(String ids){
+  String url = "https://api.spotify.com/v1/artists";
+  url  += "?ids=" + ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_artist_albums(String id, String include_groups, int limit, int offset){
+  String url = "https://api.spotify.com/v1/artists/";
+  url  += id +"/albums?include_groups="+ include_groups +"&limit=" + limit +"&offset=" + offset;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_artist_top_tracks(String id){
+  String url = "https://api.spotify.com/v1/artists/";
+  url  += id + "/top-tracks";
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+
+}
+response Spotify::get_artist_related_artist(String id){
+  String url = "https://api.spotify.com/v1/artists/";
+  url  += id + "/related-artists";
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+
+//Audiobooks
+response Spotify::get_audiobook(String id){
+  String url = "https://api.spotify.com/v1/audiobooks/";
+  url  += id;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+
+}
+response Spotify::get_several_audiobooks(String ids){
+  String url = "https://api.spotify.com/v1/audiobooks";
+  url  += "?ids=" + ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_audiobook_chapters(String id, int limit, int offset){
+  String url = "https://api.spotify.com/v1/audiobooks/";
+  url  += id +"/chapters?limit=" + limit +"&offset=" + offset;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_users_audiobooks(int limit, int offset){
+  String url = "https://api.spotify.com/v1/me/audiobooks";
+  url += "?limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::save_audiobooks_for_current_user(String ids){
+  String url = "https://api.spotify.com/v1/me/audiobooks";
+  url += "?ids=" + ids;
+
+  return RestApiPut(const_cast<char*>(url.c_str()));
+}
+response Spotify::remove_audiobooks_for_current_user(String ids){
+  String url = "https://api.spotify.com/v1/me/audiobooks";
+  url += "?ids=" + ids;
+
+  return RestApiDelete(const_cast<char*>(url.c_str()));
+}
+response Spotify::check_users_saved_audiobooks(String ids){
+  String url = "https://api.spotify.com/v1/me/audiobooks/contains";
+  url += "?ids=" + ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+
+//Categories
+response Spotify::get_several_browse_categories(String country, String locale, int limit, int offset){
+  String url = "https://api.spotify.com/v1/browse/categories";
+  url += "?country=" + country + "&locale=" + locale + "&limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_single_browse_category(String category_id, String country, String locale){
+  String url = "https://api.spotify.com/v1/browse/categories/";
+  url += category_id+ "?country=" + country + "&locale=" + locale;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+
+//Chapters
+response Spotify::get_chapter(String id){
+  String url = "https://api.spotify.com/v1/chapters/";
+  url += id;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+
+}
+response Spotify::get_several_chapters(String ids){
+  String url = "https://api.spotify.com/v1/chapters";
+  url += +"?ids=" + ids;
+
+  char url_char_array[_size_of_possibly_large_char]; 
   url.toCharArray(url_char_array, sizeof(url_char_array));
 
   return RestApiGet(url_char_array);
+}
+
+//Episodes
+response Spotify::get_episode(String id){
+  String url = "https://api.spotify.com/v1/episodes/";
+  url += id;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_several_episodes(String ids){
+  String url = "https://api.spotify.com/v1/episodes";
+  url += "?ids=" + ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_users_saved_episodes(int limit, int offset){
+  String url = "https://api.spotify.com/v1/me/episodes";
+  url += "?limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::save_episodes_for_current_user(String ids_json){
+  char url[] = "https://api.spotify.com/v1/me/episodes";
+
+  return RestApiPut(url, ids_json);
+}
+response Spotify::remove_episodes_for_current_user(String ids_json){
+  char url[] = "https://api.spotify.com/v1/me/episodes";
+
+  return RestApiDelete(url, ids_json);
+}
+response Spotify::check_users_saved_episodes(String ids){
+  String url = "https://api.spotify.com/v1/me/episodes/contains";
+  url += "?ids=" + ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+
+//Genres
+response Spotify::get_available_genre_seeds(){
+  char url[] = "https://api.spotify.com/v1/recommendations/available-genre-seeds";
+
+  return RestApiGet(url);
+}
+
+//Markets
+response Spotify::get_available_markets(){
+  char url[] = "https://api.spotify.com/v1/markets";
+  
+  return RestApiGet(url);
+}
+
+//Playlist
+response Spotify::get_playlist(String playlist_id, String fields) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "?fields=" +fields;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::change_playlist_details(String playlist_id, String name, bool is_public, bool is_collaborative, String description) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id; 
+  DynamicJsonDocument doc(400);
+
+  doc["name"] = name;
+  doc["public"] = is_public;
+  doc["collaborative"] = is_collaborative;
+  doc["description"] = description;
+
+  String payload;
+  serializeJson(doc, payload);
+
+  return RestApiPut(const_cast<char*>(url.c_str()), payload);
+}
+response Spotify::get_playlist_items(String playlist_id, String fields, int limit, int offset) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "/tracks?fields=" + fields + "&limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::update_playlist_items(String playlist_id, String uris, int range_start, int insert_before, int range_length) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "/tracks";
+  String payload = "{\"uris\":\"" + uris + "\",\"range_start\":" + String(range_start) + ",\"insert_before\":" + String(insert_before) + ",\"range_length\":\"" + String(range_length) + "\"}";
+
+  return RestApiPut(const_cast<char*>(url.c_str()), payload);
+}
+response Spotify::add_items_to_playlist(String playlist_id, String uris, int position) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "/tracks";
+  String payload = "{\"uris\":\"" + uris + "\",\"position\":" + String(position)+ "\"}";
+
+  return RestApiPost(const_cast<char*>(url.c_str()), payload);
+}
+response Spotify::remove_playlist_items(String playlist_id, String uris_array) { //Arrays
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "/tracks";
+
+  return RestApiDelete(const_cast<char*>(url.c_str()), uris_array);
+}
+response Spotify::get_current_users_playlists(int limit, int offset) {
+  String url = "https://api.spotify.com/v1/me/playlists";
+  url += "?limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_user_playlists(String user_id, int limit, int offset) {
+  String url = "https://api.spotify.com/v1/users/";
+  url += user_id + "/playlists?limit=" + String(limit) + "&offset=" +String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::create_playlist(String user_id, String name, bool is_public, bool is_collaborative, String description) {
+  String url = "https://api.spotify.com/v1/users/";
+  url += user_id + "/playlists";
+  String payload = "{\"name\":\"" + name + "\",\"public\":" + (is_public ? "true" : "false") + ",\"collaborative\":" + (is_collaborative ? "true" : "false")+"\",\"public\":"+description +"\"}";
+  return RestApiPost(const_cast<char*>(url.c_str()),payload);
+}
+response Spotify::get_featured_playlists(String country, String locale, String timestamp, int limit, int offset) {
+  String url = "https://api.spotify.com/v1/browse/featured-playlists";
+  url += "?country" + country + "&locale=" + locale + "&timestamp=" + timestamp + "&limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_category_playlists(String category_id, String country, int limit, int offset) {
+  String url = "https://api.spotify.com/v1/browse/categories/";
+  url += category_id + "/playlists?country" + country + "&limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_playlist_cover_image(String playlist_id) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "/images";
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::add_custom_playlist_cover_image(String playlist_id, String data) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "/images";
+
+  return RestApiPut(const_cast<char*>(url.c_str()),data);
+}
+
+//Search
+response Spotify::search(String q, String type, int limit, int offset){
+  String url = "https://api.spotify.com/v1/search";
+  url += "?q=" + q + "&type=" + type + "&limit=" + String(limit) + "&offset=" + String(offset);
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+
+//Shows
+response Spotify::get_show(String id) {
+  String url = "https://api.spotify.com/v1/shows/";
+  url += id;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_several_shows(String ids) {
+  String url = "https://api.spotify.com/v1/shows";
+  url += "?ids=" + ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_show_episodes(String id, int limit, int offset) {
+  String url = "https://api.spotify.com/v1/shows/";
+  url += id + "/episodes?limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_users_saved_shows(int limit, int offset) {
+  String url = "https://api.spotify.com/v1/me/shows";
+  url += "?limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::save_shows_for_current_user(String ids) {
+  String url = "https://api.spotify.com/v1/me/shows";
+  url += "?ids=" + ids;
+
+  return RestApiPut(const_cast<char*>(url.c_str()));
+}
+response Spotify::remove_shows_for_current_user(String ids) {
+  String url = "https://api.spotify.com/v1/me/shows";
+  url += "?ids=" + ids;
+
+  return RestApiDelete(const_cast<char*>(url.c_str()));
+}
+response Spotify::check_users_saved_shows(String ids) {
+  String url = "https://api.spotify.com/v1/me/shows/contains";
+  url += "?ids=" + ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+
+//Tracks
+response Spotify::get_track(String track_id) {
+  String url = "https://api.spotify.com/v1/tracks/";
+  url += track_id;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_several_tracks(String track_ids) {
+  String url = "https://api.spotify.com/v1/tracks";
+  url += "?ids=" + track_ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_user_saved_tracks(int limit, int offset) {
+  String url = "https://api.spotify.com/v1/me/tracks";
+  url += "?limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::save_tracks_for_current_user(String track_ids_json) {
+  char url[] = "https://api.spotify.com/v1/me/tracks";
+
+  return RestApiPut(url, track_ids_json);
+}
+response Spotify::remove_user_saved_tracks(String track_ids_json) {
+  char url[] = "https://api.spotify.com/v1/me/tracks";
+
+  return RestApiDelete(url, track_ids_json);
+}
+response Spotify::check_user_saved_tracks(String track_ids) {
+  String url = "https://api.spotify.com/v1/me/tracks/contains";
+  url += "?ids=" + track_ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_tracks_audio_features(String track_ids) {
+  String url = "https://api.spotify.com/v1/audio-features";
+  url += "?ids=" + track_ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_track_audio_features(String track_id) {
+  String url = "https://api.spotify.com/v1/audio-features/";
+  url += track_id;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_track_audio_analysis(String track_id) {
+  String url = "https://api.spotify.com/v1/audio-analysis/";
+  url += track_id;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+//Users
+response Spotify::get_current_user_profile() {
+  char url[] = "https://api.spotify.com/v1/me";
+
+  return RestApiGet(url);
+}
+response Spotify::get_user_top_items(String type, String time_range, int limit, int offset) {
+  String url = "https://api.spotify.com/v1/me/top/";
+  url += type +"?time_range=" + time_range + "&limit=" + String(limit) + "&offset=" + String(offset);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_user_profile(String user_id) {
+  String url = "https://api.spotify.com/v1/users/";
+  url += user_id;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::follow_playlist(String playlist_id, bool is_public) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "/followers";
+  String payload = is_public ? "true" : "false";
+
+  return RestApiPut(const_cast<char*>(url.c_str()),payload);
+}
+response Spotify::unfollow_playlist(String playlist_id) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "/followers";
+ 
+  return RestApiDelete(const_cast<char*>(url.c_str()));
+}
+response Spotify::get_followed_artists(String type, String after, int limit) {
+  String url = "https://api.spotify.com/v1/me/following";
+  url += "?type=" + type + "&after=" + after + "&limit=" + String(limit);
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::follow_artists_or_users(String type, String artist_user_ids_json) {
+  String url = "https://api.spotify.com/v1/me/following";
+  url += "?type=" + type;
+
+  return RestApiPut(const_cast<char*>(url.c_str()), artist_user_ids_json);
+}
+response Spotify::unfollow_artists_or_users(String type, String artist_user_ids_json) {
+  String url = "https://api.spotify.com/v1/me/following";
+  url += "?type=" + type;
+
+  return RestApiDelete(const_cast<char*>(url.c_str()), artist_user_ids_json);
+}
+response Spotify::check_if_user_follows_artists_or_users(String type, String artist_user_ids) {
+  String url = "https://api.spotify.com/v1/me/following/contains";
+  url += "?type=" + type + "&ids=" + artist_user_ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
+}
+response Spotify::check_if_users_follow_playlist(String playlist_id, String user_ids) {
+  String url = "https://api.spotify.com/v1/playlists/";
+  url += playlist_id + "followers/contains?ids=" + user_ids;
+
+  return RestApiGet(const_cast<char*>(url.c_str()));
 }
 void Spotify::init_response(response* response_obj){
   response_obj -> status_code = -1;
@@ -507,7 +896,6 @@ String Spotify::convert_id_to_uri(String id, String type){
   String uri = "spotify:"+type+":"+id;
   return uri;
 }
-
 String Spotify::comma_separated_string_to_json(String list) {
   DynamicJsonDocument doc(512);
   String token;
@@ -525,3 +913,4 @@ String Spotify::comma_separated_string_to_json(String list) {
   serializeJson(doc, list_doc);
   return list_doc;
 }
+

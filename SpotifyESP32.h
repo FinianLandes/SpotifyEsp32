@@ -17,12 +17,22 @@ namespace Spotify_types{
   extern String TYPE_ARTIST;
   extern String TYPE_TRACK;
   extern String TYPE_PLAYLIST;
+  extern String GROUP_ALBUM;
+  extern String GROUP_SINGLE;
+  extern String GROUP_APPEARS_ON;
+  extern String GROUP_COMPILATION;
+  extern String TIME_RANGE_SHORT;
+  extern String TIME_RANGE_MEDIUM;
+  extern String TIME_RANGE_LONG;
 };
 typedef struct{
   int status_code;
   String reply;
 } response;
 
+struct recommendations{
+
+};
 void print_response(response response_obj);
 
 class Spotify {
@@ -37,7 +47,7 @@ class Spotify {
     response previous();
     response available_devices();
     response current_playback_state();
-    response recently_played_tracks(int limit);
+    response recently_played_tracks(int limit = 10);
     response seek_to_position(int time_ms);
     response get_queue();
     response repeat_mode(String mode);
@@ -48,89 +58,104 @@ class Spotify {
     //Albums
     response get_album(String id);
     response get_albums(String ids);
-    response get_album_tracks(String id, int limit, int offset);
-    response get_users_saved_albums(int limit, int offset);
-    response save_albums_for_current_user(String ids);
-    response remove_users_saved_albums(String ids);
+    response get_album_tracks(String id, int limit = 10, int offset = 0);
+    response get_users_saved_albums(int limit = 10, int offset = 0);
+    response save_albums_for_current_user(String ids_json);
+    response remove_users_saved_albums(String ids_json);
     response check_useres_saved_albums(String ids);
-    response get_new_releases(String country, int limit, int offset);
+    response get_new_releases(String country, int limit = 10, int offset = 0);
     //Artists
     response get_artist(String id);
     response get_several_artists(String ids);
-    response get_artist_albums(String id);
+    response get_artist_albums(String id, String include_groups, int limit = 10, int offset = 0);
     response get_artist_top_tracks(String id);
     response get_artist_related_artist(String id);
     //Audiobooks
     response get_audiobook(String id);
     response get_several_audiobooks(String ids);
-    response get_audiobook_chapters(String id);
-    response get_users_audiobooks(int limit, int offset);
+    response get_audiobook_chapters(String id, int limit = 10, int offset = 0);
+    response get_users_audiobooks(int limit = 10, int offset = 0);
     response save_audiobooks_for_current_user(String ids);
-    response remove_audiobooks_for_current_user(String id);
+    response remove_audiobooks_for_current_user(String ids);
     response check_users_saved_audiobooks(String ids);
     //Categories
-    response get_several_browse_categories(String country, String locale, int limit, int offset);
+    response get_several_browse_categories(String country, String locale, int limit = 10, int offset = 0);
     response get_single_browse_category(String category_id, String country, String locale);
-    //Chapters
+    //Chapters (Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
     response get_chapter(String id);
     response get_several_chapters(String ids);
     //Episodes
     response get_episode(String id);
     response get_several_episodes(String ids);
-    response get_users_saved_episodes(int limit, int offset);
-    response save_episodes_for_current_user(String ids);
+    response get_users_saved_episodes(int limit = 10, int offset = 0);
+    response save_episodes_for_current_user(String ids_json);
     response remove_episodes_for_current_user(String id);
-    response check_users_saved_episodes(String ids);
+    response check_users_saved_episodes(String ids_json);
     //Genres
     response get_available_genre_seeds();
     //Markets
     response get_available_markets();
     //Playlists
-    response get_playlist(String playlist_id, String fields, String additional_type);
+    response get_playlist(String playlist_id, String fields);
     response change_playlist_details(String playlist_id, String name, bool is_public, bool is_collaborative, String description);
-    response get_playlist_items(String playlist_id, String fields, String additional_types, int limit, int offset);
-    response update_playlist_items(String playlist_id, String uris, int range_start,int insert_before,int range_length, String snapshot_id);
+    response get_playlist_items(String playlist_id, String fields, int limit = 10, int offset = 0);
+    response update_playlist_items(String playlist_id, String uris, int range_start = 0, int insert_before = 1, int range_length = 1);
     response add_items_to_playlist(String playlist_id, String uris, int position);
-    response remove_playlist_items(String playlist_id, String uris, String snapshot_id);
-    response get_current_users_playlists(int limit, int offset);
-    response get_user_playlists(String user_id,int limit, int offset);
+    response remove_playlist_items(String playlist_id, String uris_array);
+    response get_current_users_playlists(int limit = 10, int offset = 0);
+    response get_user_playlists(String user_id,int limit = 10, int offset = 0);
     response create_playlist(String user_id, String name, bool is_public, bool is_collaborative, String description);
-    response get_featured_playlists(String country, String locale, String timestamp,int limit, int offset);
-    response get_category_playlists(String category_id, String country, int limit, int offset);
+    response get_featured_playlists(String country, String locale, String timestamp,int limit = 10, int offset = 0);
+    response get_category_playlists(String category_id, String country, int limit = 10, int offset = 0);
     response get_playlist_cover_image(String playlist_id);
     response add_custom_playlist_cover_image(String playlist_id, String data);
     //Search
-    response search(String q, String type, int limit, int offset);
+    response search(String q, String type, int limit = 10, int offset = 0);
     //Shows
     response get_show(String id);
     response get_several_shows(String ids);
-    response get_show_episodes(String id, int limit, int offset);
-    response get_users_saved_shows(int limit, int offset);
+    response get_show_episodes(String id, int limit = 10, int offset = 0);
+    response get_users_saved_shows(int limit = 10, int offset = 0);
     response save_shows_for_current_user(String ids);
-    response remove_shows_for_current_user(String id);
+    response remove_shows_for_current_user(String ids);
     response check_users_saved_shows(String ids);
     //Tracks
     response get_track(String track_id);
-    response get_several_tracks();
-    response get_user_saved_tracks();
-    response save_tracks_for_current_user();
-    response remove_user_saved_tracks();
-    response check_user_saved_tracks();
-    response get_tracks_audio_features();
-    response get_track_audio_features();
-    response get_track_audio_analysis();
-    response get_recommendations();
+    response get_several_tracks(String track_ids);
+    response get_user_saved_tracks(int limit = 10, int offset = 0);
+    response save_tracks_for_current_user(String track_ids_json);
+    response remove_user_saved_tracks(String track_ids_json);
+    response check_user_saved_tracks(String track_ids);
+    response get_tracks_audio_features(String track_ids);
+    response get_track_audio_features(String track_id);
+    response get_track_audio_analysis(String track_id);
+    response get_recommendations(int limit = 10, String seed_artists = "", String seed_genres = "", String seed_tracks = "",
+                                 int min_acousticness = -1, int max_acousticness = -1, int target_acousticness = -1,
+                                 int min_danceability = -1, int max_danceability = -1, int target_danceability = -1,
+                                 int min_duration_ms = -1, int max_duration_ms = -1, int target_duration_ms = -1,
+                                 int min_energy = -1, int max_energy = -1, int target_energy = -1,
+                                 int min_instrumentalness = -1, int max_instrumentalness = -1, int target_instrumentalness = -1,
+                                 int min_key = -1, int max_key = -1, int target_key = -1,
+                                 int min_liveness = -1, int max_liveness = -1, int target_liveness = -1,
+                                 int min_loudness = -1, int max_loudness = -1, int target_loudness = -1,
+                                 int min_mode = -1, int max_mode = -1, int target_mode = -1,
+                                 int min_popularity = -1, int max_popularity = -1, int target_popularity = -1,
+                                 int min_speechiness = -1, int max_speechiness = -1, int target_speechiness = -1,
+                                 int min_tempo = -1, int max_tempo = -1, int target_tempo = -1,
+                                 int min_time_signature = -1, int max_time_signature = -1, int target_time_signature = -1,
+                                 int min_valence = -1, int max_valence = -1, int target_valence = -1);
     //Users
     response get_current_user_profile();
-    response get_user_top_items();
-    response get_user_profile();
-    response follow_playlist();
-    response unfollow_playlist();
-    response get_followed_artists();
-    response follow_artists_or_users();
-    response unfollow_artists_or_users();
-    response check_if_user_follows_artists_or_users();
-    response check_if_users_follow_playlist();
+    response get_user_top_items(String type, String time_range = "medium_term", int limit = 10, int offset = 0);
+    response get_user_profile(String user_id);
+    response follow_playlist(String playlist_id, bool is_public);
+    response unfollow_playlist(String playlist_id);
+    response get_followed_artists(String after, String type = "artist", int limit = 10);
+    response follow_artists_or_users(String type, String artist_user_ids_json);
+    response unfollow_artists_or_users(String type, String artist_user_ids_json);
+    response check_if_user_follows_artists_or_users(String type, String artist_user_ids);
+    response check_if_users_follow_playlist(String playlist_id, String user_ids);
+
     //Simplified versions of the above
     String current_track_name();
     String current_track_id();
@@ -142,6 +167,7 @@ class Spotify {
 
   private:
     static const int _size_of_possibly_large_char = 600;
+    char string_to_char(String data, int size);
     bool get_token();
     void init_response(response* response_obj);
     response RestApiGet(char rest_url[_size_of_possibly_large_char]);
