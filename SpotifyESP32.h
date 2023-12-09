@@ -24,6 +24,8 @@ namespace Spotify_types{
   extern String TIME_RANGE_SHORT;
   extern String TIME_RANGE_MEDIUM;
   extern String TIME_RANGE_LONG;
+  extern String TOP_TYPE_ARTIST;
+  extern String TOP_TYPE_TRACKS;
 };
 typedef struct{
   int status_code;
@@ -68,9 +70,9 @@ class Spotify {
     response get_artist(String id);
     response get_several_artists(String ids);
     response get_artist_albums(String id, String include_groups, int limit = 10, int offset = 0);
-    response get_artist_top_tracks(String id);
+    response get_artist_top_tracks(String id, String country);
     response get_artist_related_artist(String id);
-    //Audiobooks
+    //Audiobooks (Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
     response get_audiobook(String id);
     response get_several_audiobooks(String ids);
     response get_audiobook_chapters(String id, int limit = 10, int offset = 0);
@@ -100,7 +102,7 @@ class Spotify {
     response change_playlist_details(String playlist_id, String name, bool is_public, bool is_collaborative, String description);
     response get_playlist_items(String playlist_id, String fields, int limit = 10, int offset = 0);
     response update_playlist_items(String playlist_id, String uris, int range_start = 0, int insert_before = 1, int range_length = 1);
-    response add_items_to_playlist(String playlist_id, String uris, int position);
+    response add_items_to_playlist(String playlist_id, String uris, int position = 0);
     response remove_playlist_items(String playlist_id, String uris_array);
     response get_current_users_playlists(int limit = 10, int offset = 0);
     response get_user_playlists(String user_id,int limit = 10, int offset = 0);

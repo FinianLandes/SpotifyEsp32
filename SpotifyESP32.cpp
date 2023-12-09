@@ -10,6 +10,8 @@ namespace Spotify_types{
   String TYPE_ARTIST = "artist";
   String TYPE_TRACK = "track";
   String TYPE_PLAYLIST = "playlist";
+  String TOP_TYPE_ARTIST = "artists";
+  String TOP_TYPE_TRACKS = "tracks";
   String GROUP_ALBUM = "album";
   String GROUP_SINGLE = "single";
   String GROUP_APPEARS_ON = "appears_on";
@@ -44,6 +46,8 @@ response Spotify::RestApiGet(char rest_url[_size_of_possibly_large_char]){
   response_obj.status_code = http_code;
 
   if(_debug_on){
+    Serial.print("URL: ");
+    Serial.println(rest_url);
     Serial.print("GET status: ");
     Serial.println(http_code);
     Serial.print(" Reply: ");
@@ -56,7 +60,7 @@ response Spotify::RestApiGet(char rest_url[_size_of_possibly_large_char]){
   else if(_retry<=3){
     _retry++;
     if(get_token()){
-      response_obj = currently_playing();
+      response_obj = RestApiGet(rest_url);
     }
   }
   http.end();
@@ -88,6 +92,8 @@ response Spotify::RestApiPut(char rest_url[_size_of_possibly_large_char], String
 
   if(_debug_on){
     //TODO: Add rexex ([^\/]+$) to extract last text (pause/play etc.) from uri and put into debug info
+    Serial.print("URL: ");
+    Serial.println(rest_url);
     Serial.print("PUT status: ");
     Serial.println(http_code);
     Serial.print(" Reply: ");
@@ -138,7 +144,9 @@ response Spotify::RestApiPost(char rest_url[100], String payload){
 
   if(_debug_on){
     //TODO: Add rexex ([^\/]+$) to extract last text (pause/play etc.) from uri and put into debug info
-    Serial.print("PUT start_playback status: ");
+    Serial.print("URL: ");
+    Serial.println(rest_url);
+    Serial.print("POST status: ");
     Serial.println(http_code);
     Serial.print(" Reply: ");
     Serial.println(reply);
@@ -186,6 +194,8 @@ response Spotify::RestApiDelete(char rest_url[100], String payload){
 
   if (_debug_on) {
     // TODO: Add regex ([^\/]+$) to extract last text (pause/play etc.) from uri and put into debug info
+    Serial.print("URL: ");
+    Serial.println(rest_url);
     Serial.print("DELETE status: ");
     Serial.println(http_code);
     Serial.print(" Reply: ");
@@ -387,9 +397,9 @@ response Spotify::get_artist_albums(String id, String include_groups, int limit,
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::get_artist_top_tracks(String id){
+response Spotify::get_artist_top_tracks(String id, String country){
   String url = "https://api.spotify.com/v1/artists/";
-  url  += id + "/top-tracks";
+  url  += id + "/top-tracks?market=" + country;
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 
@@ -417,7 +427,7 @@ response Spotify::get_several_audiobooks(String ids){
 }
 response Spotify::get_audiobook_chapters(String id, int limit, int offset){
   String url = "https://api.spotify.com/v1/audiobooks/";
-  url  += id +"/chapters?limit=" + limit +"&offset=" + offset;
+  url  += id +"/chapters?limit=" +String(limit) +"&offset=" + String(offset);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -538,6 +548,10 @@ response Spotify::get_playlist(String playlist_id, String fields) {
 response Spotify::change_playlist_details(String playlist_id, String name, bool is_public, bool is_collaborative, String description) {
   String url = "https://api.spotify.com/v1/playlists/";
   url += playlist_id; 
+  
+  if (is_public && is_collaborative){
+    is_collaborative = false;
+  }
   DynamicJsonDocument doc(400);
 
   doc["name"] = name;
@@ -566,8 +580,13 @@ response Spotify::update_playlist_items(String playlist_id, String uris, int ran
 response Spotify::add_items_to_playlist(String playlist_id, String uris, int position) {
   String url = "https://api.spotify.com/v1/playlists/";
   url += playlist_id + "/tracks";
-  String payload = "{\"uris\":\"" + uris + "\",\"position\":" + String(position)+ "\"}";
+  DynamicJsonDocument doc(1000);
+  doc["uris"] = uris;
+  doc["position"] = position;
 
+  String payload;
+  serializeJson(doc, payload);
+  Serial.println(payload);
   return RestApiPost(const_cast<char*>(url.c_str()), payload);
 }
 response Spotify::remove_playlist_items(String playlist_id, String uris_array) { //Arrays
@@ -780,7 +799,7 @@ response Spotify::check_if_user_follows_artists_or_users(String type, String art
 }
 response Spotify::check_if_users_follow_playlist(String playlist_id, String user_ids) {
   String url = "https://api.spotify.com/v1/playlists/";
-  url += playlist_id + "followers/contains?ids=" + user_ids;
+  url += playlist_id + "/followers/contains?ids=" + user_ids;
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -791,8 +810,8 @@ void Spotify::init_response(response* response_obj){
 void print_response(response response_obj){
   Serial.print("Status: ");
   Serial.println(response_obj.status_code);
-  Serial.print("Reply: ");
-  Serial.println(response_obj.reply);
+  //Serial.print("Reply: ");
+  //Serial.println(response_obj.reply);
 }
 bool Spotify::get_token(){
   bool reply = false;
