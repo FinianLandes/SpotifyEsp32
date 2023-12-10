@@ -37,11 +37,11 @@ String category_id = "dinner";
 String episode_id = "3UHFkXFDAHr7cBlRoUmdiY";
 String episode_ids = "4H4ZXQ07SehfQDAImiHOXF,3UHFkXFDAHr7cBlRoUmdiY";
 
-String playlist_id = "6lGlX7KRHmy6AuF5NFT0TW";
+String playlist_id = "5ZJAomiAtiow9nTloNl01E";
 String fields = "items(track(name,href,album(name,href)))";
 String uris_array = "";
 
-String user_id = "chaerne";
+String user_id = "adix3gjuq0g570rwufhfcw89o";
 
 String show_id = "5CfCWKI5pZ28U0uOzXkDHe";
 String show_ids = "5CfCWKI5pZ28U0uOzXkDHe,5as3aKmN2k11yfDDDSrvaZ";
@@ -51,6 +51,9 @@ String artist_user_ids = "2CIMQHirSU0MQqyYHq0eOx,57dN52uHvrHOxijzpIgu3E,1vCWHaC5
 void setup() {
   Serial.begin(9600);
   connectToWifi();
+
+  Serial.println("change_playlist_details: ");
+  print_response(sp.change_playlist_details(playlist_id, "Hello", false, false, "WTF!!"));
 }
 void loop() {
   // put your main code here, to run repeatedly:
@@ -224,12 +227,13 @@ void test_markets(){
 void test_playlist(){
   Serial.println("get_playlist: ");
   print_response(sp.get_playlist(playlist_id, fields));
-  //Not working JSON parsing error
+  
   Serial.println("change_playlist_details: ");
   print_response(sp.change_playlist_details(playlist_id, "Hello", false, false, "WTF!!"));
 
   Serial.println("get_playlist_items: ");
   print_response(sp.get_playlist_items(playlist_id, fields));
+  
   //Not working (missing part of implementation)
   Serial.println("update_playlist_items: ");
   print_response(sp.update_playlist_items(playlist_id, sp.convert_id_to_uri(song_id,TYPE_TRACK)));
@@ -245,7 +249,7 @@ void test_playlist(){
   
   Serial.println("get_user_playlists: ");
   print_response(sp.get_user_playlists(user_id));
-  //Not Working JSON parsing error
+
   Serial.println("create_playlist: ");
   print_response(sp.create_playlist(user_id, "Test", true, false, "no"));
 

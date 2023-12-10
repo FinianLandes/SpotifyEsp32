@@ -94,6 +94,8 @@ response Spotify::RestApiPut(char rest_url[_size_of_possibly_large_char], String
     //TODO: Add rexex ([^\/]+$) to extract last text (pause/play etc.) from uri and put into debug info
     Serial.print("URL: ");
     Serial.println(rest_url);
+    Serial.print("Payload: ");
+    Serial.println(payload);
     Serial.print("PUT status: ");
     Serial.println(http_code);
     Serial.print(" Reply: ");
@@ -107,7 +109,7 @@ response Spotify::RestApiPut(char rest_url[_size_of_possibly_large_char], String
     if(message == "Only valid bearer authentication supported"){
       _retry++;
       if(get_token()){
-        response_obj = RestApiPut(rest_url);
+        response_obj = RestApiPut(rest_url, payload);
       }
     }
     else{
@@ -146,6 +148,8 @@ response Spotify::RestApiPost(char rest_url[100], String payload){
     //TODO: Add rexex ([^\/]+$) to extract last text (pause/play etc.) from uri and put into debug info
     Serial.print("URL: ");
     Serial.println(rest_url);
+    Serial.print("Payload: ");
+    Serial.println(payload);
     Serial.print("POST status: ");
     Serial.println(http_code);
     Serial.print(" Reply: ");
@@ -159,7 +163,7 @@ response Spotify::RestApiPost(char rest_url[100], String payload){
     if(message == "Only valid bearer authentication supported"){
       _retry++;
       if(get_token()){
-        response_obj = RestApiPost(rest_url);
+        response_obj = RestApiPost(rest_url, payload);
       }
     }
     else{
@@ -196,6 +200,8 @@ response Spotify::RestApiDelete(char rest_url[100], String payload){
     // TODO: Add regex ([^\/]+$) to extract last text (pause/play etc.) from uri and put into debug info
     Serial.print("URL: ");
     Serial.println(rest_url);
+    Serial.print("Payload: ");
+    Serial.println(payload);
     Serial.print("DELETE status: ");
     Serial.println(http_code);
     Serial.print(" Reply: ");
@@ -209,7 +215,7 @@ response Spotify::RestApiDelete(char rest_url[100], String payload){
     if (message == "Only valid bearer authentication supported") {
       _retry++;
       if (get_token()) {
-        response_obj = RestApiDelete(rest_url); 
+        response_obj = RestApiDelete(rest_url, payload); 
       }
     } else {
       response_obj.reply = message;
@@ -548,15 +554,14 @@ response Spotify::get_playlist(String playlist_id, String fields) {
 response Spotify::change_playlist_details(String playlist_id, String name, bool is_public, bool is_collaborative, String description) {
   String url = "https://api.spotify.com/v1/playlists/";
   url += playlist_id; 
-  
+  DynamicJsonDocument doc(400);
   if (is_public && is_collaborative){
     is_collaborative = false;
-  }
-  DynamicJsonDocument doc(400);
 
+  }
+  doc["collaborative"] = is_collaborative;
   doc["name"] = name;
   doc["public"] = is_public;
-  doc["collaborative"] = is_collaborative;
   doc["description"] = description;
 
   String payload;
@@ -573,7 +578,15 @@ response Spotify::get_playlist_items(String playlist_id, String fields, int limi
 response Spotify::update_playlist_items(String playlist_id, String uris, int range_start, int insert_before, int range_length) {
   String url = "https://api.spotify.com/v1/playlists/";
   url += playlist_id + "/tracks";
-  String payload = "{\"uris\":\"" + uris + "\",\"range_start\":" + String(range_start) + ",\"insert_before\":" + String(insert_before) + ",\"range_length\":\"" + String(range_length) + "\"}";
+
+  DynamicJsonDocument doc(800); 
+  doc["uris"] = uris;
+  doc["range_start"] = range_start;
+  doc["insert_before"] = insert_before;
+  doc["range_length"] = range_length;
+
+  String payload;
+  serializeJson(doc, payload);
 
   return RestApiPut(const_cast<char*>(url.c_str()), payload);
 }
@@ -610,7 +623,19 @@ response Spotify::get_user_playlists(String user_id, int limit, int offset) {
 response Spotify::create_playlist(String user_id, String name, bool is_public, bool is_collaborative, String description) {
   String url = "https://api.spotify.com/v1/users/";
   url += user_id + "/playlists";
-  String payload = "{\"name\":\"" + name + "\",\"public\":" + (is_public ? "true" : "false") + ",\"collaborative\":" + (is_collaborative ? "true" : "false")+"\",\"public\":"+description +"\"}";
+
+  if (is_public && is_collaborative){
+    is_collaborative = false;
+  }
+
+  DynamicJsonDocument doc(256); 
+  doc["name"] = name;
+  doc["public"] = is_public;
+  doc["collaborative"] = is_collaborative;
+  doc["description"] = description;
+  String payload;
+  serializeJson(doc, payload);
+
   return RestApiPost(const_cast<char*>(url.c_str()),payload);
 }
 response Spotify::get_featured_playlists(String country, String locale, String timestamp, int limit, int offset) {
@@ -810,8 +835,8 @@ void Spotify::init_response(response* response_obj){
 void print_response(response response_obj){
   Serial.print("Status: ");
   Serial.println(response_obj.status_code);
-  //Serial.print("Reply: ");
-  //Serial.println(response_obj.reply);
+  Serial.print("Reply: ");
+  Serial.println(response_obj.reply);
 }
 bool Spotify::get_token(){
   bool reply = false;
