@@ -263,9 +263,9 @@ bool Spotify::get_token(){
   http.end();
   return reply;
 }
-String Spotify::array_to_string(char** array) {
+String Spotify::array_to_string(int size, char** array) {
   String result;
-  for (int i = 0; array[i] != nullptr; ++i) {
+  for (int i = 0; i<size; ++i) {
     result += array[i];
     if (array[i + 1] != nullptr) {
       result += ",";
@@ -274,19 +274,176 @@ String Spotify::array_to_string(char** array) {
   
   return result;
 }
-String Spotify::array_to_json_array(char** array){
+String Spotify::array_to_json_array(int size,char** array){
   String data;
   DynamicJsonDocument doc(_size_of_possibly_large_char);
   JsonArray json_array = doc.to<JsonArray>();
 
-  for (int i = 0; array[i] != nullptr; ++i) {
+  for (int i = 0; i<size; ++i) {
     json_array.add(array[i]);
   }
 
   serializeJson(json_array,data);
   return data;
 }
+bool Spotify::is_valid_value(float param) {
+  return param >= 0.0 && param <= 1.0;
+}
+bool Spotify::is_valid_value(int param) {
+  return param >0;
+}
+void Spotify::populate_float_values(std::map<String, float>& float_params, recommendations& recom){
+   if (is_valid_value(recom.min_acousticness)) {
+    float_params["min_acousticness"] = recom.min_acousticness;
+  }
+  if (is_valid_value(recom.max_acousticness)) {
+    float_params["max_acousticness"] = recom.max_acousticness;
+  }
+  if (is_valid_value(recom.target_acousticness)) {
+    float_params["target_acousticness"] = recom.target_acousticness;
+  }
 
+  if (is_valid_value(recom.min_danceability)) {
+    float_params["min_danceability"] = recom.min_danceability;
+  }
+  if (is_valid_value(recom.max_danceability)) {
+    float_params["max_danceability"] = recom.max_danceability;
+  }
+  if (is_valid_value(recom.target_danceability)) {
+    float_params["target_danceability"] = recom.target_danceability;
+  }
+
+  if (is_valid_value(recom.min_duration_ms)) {
+    float_params["min_duration_ms"] = recom.min_duration_ms;
+  }
+  if (is_valid_value(recom.max_duration_ms)) {
+    float_params["max_duration_ms"] = recom.max_duration_ms;
+  }
+  if (is_valid_value(recom.target_duration_ms)) {
+    float_params["target_duration_ms"] = recom.target_duration_ms;
+  }
+
+  if (is_valid_value(recom.min_energy)) {
+    float_params["min_energy"] = recom.min_energy;
+  }
+  if (is_valid_value(recom.max_energy)) {
+    float_params["max_energy"] = recom.max_energy;
+  }
+  if (is_valid_value(recom.target_energy)) {
+    float_params["target_energy"] = recom.target_energy;
+  }
+
+  if (is_valid_value(recom.min_instrumentalness)) {
+    float_params["min_instrumentalness"] = recom.min_instrumentalness;
+  }
+  if (is_valid_value(recom.max_instrumentalness)) {
+    float_params["max_instrumentalness"] = recom.max_instrumentalness;
+  }
+  if (is_valid_value(recom.target_instrumentalness)) {
+    float_params["target_instrumentalness"] = recom.target_instrumentalness;
+  }
+
+  if (is_valid_value(recom.min_key)) {
+    float_params["min_key"] = recom.min_key;
+  }
+  if (is_valid_value(recom.max_key)) {
+    float_params["max_key"] = recom.max_key;
+  }
+  if (is_valid_value(recom.target_key)) {
+    float_params["target_key"] = recom.target_key;
+  }
+
+  if (is_valid_value(recom.min_liveness)) {
+    float_params["min_liveness"] = recom.min_liveness;
+  }
+  if (is_valid_value(recom.max_liveness)) {
+    float_params["max_liveness"] = recom.max_liveness;
+  }
+  if (is_valid_value(recom.target_liveness)) {
+    float_params["target_liveness"] = recom.target_liveness;
+  }
+
+  if (is_valid_value(recom.min_loudness)) {
+    float_params["min_loudness"] = recom.min_loudness;
+  }
+  if (is_valid_value(recom.max_loudness)) {
+    float_params["max_loudness"] = recom.max_loudness;
+  }
+  if (is_valid_value(recom.target_loudness)) {
+    float_params["target_loudness"] = recom.target_loudness;
+  }
+
+  if (is_valid_value(recom.min_mode)) {
+    float_params["min_mode"] = recom.min_mode;
+  }
+  if (is_valid_value(recom.max_mode)) {
+    float_params["max_mode"] = recom.max_mode;
+  }
+  if (is_valid_value(recom.target_mode)) {
+    float_params["target_mode"] = recom.target_mode;
+  }
+
+  if (is_valid_value(recom.min_popularity)) {
+    float_params["min_popularity"] = recom.min_popularity;
+  }
+  if (is_valid_value(recom.max_popularity)) {
+    float_params["max_popularity"] = recom.max_popularity;
+  }
+  if (is_valid_value(recom.target_popularity)) {
+    float_params["target_popularity"] = recom.target_popularity;
+  }
+
+  if (is_valid_value(recom.min_speechiness)) {
+    float_params["min_speechiness"] = recom.min_speechiness;
+  }
+  if (is_valid_value(recom.max_speechiness)) {
+    float_params["max_speechiness"] = recom.max_speechiness;
+  }
+  if (is_valid_value(recom.target_speechiness)) {
+    float_params["target_speechiness"] = recom.target_speechiness;
+  }
+
+  if (is_valid_value(recom.min_tempo)) {
+    float_params["min_tempo"] = recom.min_tempo;
+  }
+  if (is_valid_value(recom.max_tempo)) {
+    float_params["max_tempo"] = recom.max_tempo;
+  }
+  if (is_valid_value(recom.target_tempo)) {
+    float_params["target_tempo"] = recom.target_tempo;
+  }
+
+  if (is_valid_value(recom.min_time_signature)) {
+    float_params["min_time_signature"] = recom.min_time_signature;
+  }
+  if (is_valid_value(recom.max_time_signature)) {
+    float_params["max_time_signature"] = recom.max_time_signature;
+  }
+  if (is_valid_value(recom.target_time_signature)) {
+    float_params["target_time_signature"] = recom.target_time_signature;
+  }
+
+  if (is_valid_value(recom.min_valence)) {
+    float_params["min_valence"] = recom.min_valence;
+  }
+  if (is_valid_value(recom.max_valence)) {
+    float_params["max_valence"] = recom.max_valence;
+  }
+  if (is_valid_value(recom.target_valence)) {
+    float_params["target_valence"] = recom.target_valence;
+  }
+}
+void Spotify::populate_char_values(std::map<String, String>& char_params, recommendations& recom){
+  if (is_valid_value(recom.seed_artists_size)) {
+    char_params["seed_artists"] = array_to_string(recom.seed_artists_size, recom.seed_artists);
+  }
+  if (is_valid_value(recom.seed_genres_size)) {
+    char_params["seed_genres"] = array_to_string(recom.seed_genres_size, recom.seed_genres);
+  }
+  if (is_valid_value(recom.seed_tracks_size)) {
+    char_params["seed_tracks"] = array_to_string(recom.seed_tracks_size, recom.seed_tracks);
+  }
+}
 //API functions
 //Player
 response Spotify::currently_playing(){
@@ -397,9 +554,9 @@ response Spotify::get_album(String album_id){
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::get_albums(char ** album_ids){
+response Spotify::get_albums(int size, char ** album_ids){
   String url = "https://api.spotify.com/v1/albums";
-  url  += "?ids=" + array_to_string(album_ids);
+  url  += "?ids=" + array_to_string(size, album_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 
@@ -416,19 +573,19 @@ response Spotify::get_users_saved_albums(int limit, int offset){
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::save_albums_for_current_user(char ** album_ids){
+response Spotify::save_albums_for_current_user(int size,char ** album_ids){
   char url[] = "https://api.spotify.com/v1/me/albums";
 
-  return RestApiPut(url, array_to_json_array(album_ids));
+  return RestApiPut(url, array_to_json_array(size, album_ids));
 }
-response Spotify::remove_users_saved_albums(char ** album_ids){
+response Spotify::remove_users_saved_albums(int size,char ** album_ids){
   char url[] = "https://api.spotify.com/v1/me/albums";
   
-  return RestApiDelete(url, array_to_json_array(album_ids));
+  return RestApiDelete(url, array_to_json_array(size, album_ids));
 }
-response Spotify::check_useres_saved_albums(char ** album_ids){
+response Spotify::check_useres_saved_albums(int size,char ** album_ids){
   String url = "https://api.spotify.com/v1/me/albums/contains";
-  url  += "?ids=" + array_to_string(album_ids);
+  url  += "?ids=" + array_to_string(size, album_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -446,9 +603,9 @@ response Spotify::get_artist(String artist_id){
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::get_several_artists(char ** artist_ids){
+response Spotify::get_several_artists(int size, char ** artist_ids){
   String url = "https://api.spotify.com/v1/artists";
-  url  += "?ids=" + array_to_string(artist_ids);
+  url  += "?ids=" + array_to_string(size, artist_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -480,9 +637,9 @@ response Spotify::get_audiobook(String audiobook_id){
   return RestApiGet(const_cast<char*>(url.c_str()));
 
 }
-response Spotify::get_several_audiobooks(char** audiobook_ids){
+response Spotify::get_several_audiobooks(int size,char** audiobook_ids){
   String url = "https://api.spotify.com/v1/audiobooks";
-  url  += "?ids=" + array_to_string(audiobook_ids);
+  url  += "?ids=" + array_to_string(size, audiobook_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -498,21 +655,21 @@ response Spotify::get_users_audiobooks(int limit, int offset){
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::save_audiobooks_for_current_user(char** audiobook_ids){
+response Spotify::save_audiobooks_for_current_user(int size,char** audiobook_ids){
   String url = "https://api.spotify.com/v1/me/audiobooks";
-  url += "?ids=" + array_to_string(audiobook_ids);
+  url += "?ids=" + array_to_string(size, audiobook_ids);
 
   return RestApiPut(const_cast<char*>(url.c_str()));
 }
-response Spotify::remove_audiobooks_for_current_user(char** audiobook_ids){
+response Spotify::remove_audiobooks_for_current_user(int size,char** audiobook_ids){
   String url = "https://api.spotify.com/v1/me/audiobooks";
-  url += "?ids=" + array_to_string(audiobook_ids);
+  url += "?ids=" + array_to_string(size, audiobook_ids);
 
   return RestApiDelete(const_cast<char*>(url.c_str()));
 }
-response Spotify::check_users_saved_audiobooks(char** audiobook_ids){
+response Spotify::check_users_saved_audiobooks(int size,char** audiobook_ids){
   String url = "https://api.spotify.com/v1/me/audiobooks/contains";
-  url += "?ids=" + array_to_string(audiobook_ids);
+  url += "?ids=" + array_to_string(size, audiobook_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -539,11 +696,9 @@ response Spotify::get_chapter(String chapter_id){
   return RestApiGet(const_cast<char*>(url.c_str()));
 
 }
-response Spotify::get_several_chapters(char** chapter_ids){
+response Spotify::get_several_chapters(int size, char** chapter_ids){
   String url = "https://api.spotify.com/v1/chapters";
-  url += +"?ids=" + array_to_string(chapter_ids);
-
-
+  url += +"?ids=" + array_to_string(size, chapter_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -555,9 +710,9 @@ response Spotify::get_episode(String episode_id){
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::get_several_episodes(char** episode_ids){
+response Spotify::get_several_episodes(int size,char** episode_ids){
   String url = "https://api.spotify.com/v1/episodes";
-  url += "?ids=" + array_to_string(episode_ids);
+  url += "?ids=" + array_to_string(size, episode_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -567,19 +722,19 @@ response Spotify::get_users_saved_episodes(int limit, int offset){
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::save_episodes_for_current_user(char** episode_ids){
+response Spotify::save_episodes_for_current_user(int size,char** episode_ids){
   char url[] = "https://api.spotify.com/v1/me/episodes";
 
-  return RestApiPut(url, array_to_json_array(episode_ids));
+  return RestApiPut(url, array_to_json_array(size, episode_ids));
 }
-response Spotify::remove_episodes_for_current_user(char** episode_ids){
+response Spotify::remove_episodes_for_current_user(int size,char** episode_ids){
   char url[] = "https://api.spotify.com/v1/me/episodes";
 
-  return RestApiDelete(url, array_to_json_array(episode_ids));
+  return RestApiDelete(url, array_to_json_array(size, episode_ids));
 }
-response Spotify::check_users_saved_episodes(char** episode_ids){
+response Spotify::check_users_saved_episodes(int size,char** episode_ids){
   String url = "https://api.spotify.com/v1/me/episodes/contains";
-  url += "?ids=" + array_to_string(episode_ids);
+  url += "?ids=" + array_to_string(size, episode_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -629,40 +784,37 @@ response Spotify::get_playlist_items(String playlist_id, String fields, int limi
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::update_playlist_items(String playlist_id, char** uris, int range_start, int insert_before, int range_length) {
+response Spotify::update_playlist_items(String playlist_id,int size, char** uris, int range_length, int range_start, int insert_before) {
   String url = "https://api.spotify.com/v1/playlists/";
   url += playlist_id + "/tracks";
+  
   DynamicJsonDocument doc(800);
-  if(uris == nullptr){
-    doc["range_start"] = range_start;
-    doc["insert_before"] = insert_before;
-    doc["range_length"] = range_length;
-  }
-  else{
-    doc["uris"] = array_to_string(uris);
-  }
+  doc["uris"] = array_to_json_array(size, uris);
+  doc["range_start"] = range_start;
+  doc["insert_before"] = insert_before;
+  doc["range_length"] = range_length;
+
   String payload;
   serializeJson(doc, payload);
 
   return RestApiPut(const_cast<char*>(url.c_str()), payload);
 }
-response Spotify::add_items_to_playlist(String playlist_id, char ** uris, int position) {
+response Spotify::add_items_to_playlist(String playlist_id, int size, char ** uris, int position) {
   String url = "https://api.spotify.com/v1/playlists/";
   url += playlist_id + "/tracks";
   DynamicJsonDocument doc(1000);
-  doc["uris"] = array_to_json_array(uris);
+  doc["uris"] = array_to_json_array(size, uris);
   doc["position"] = position;
 
   String payload;
   serializeJson(doc, payload);
-  Serial.println(payload);
   return RestApiPost(const_cast<char*>(url.c_str()), payload);
 }
-response Spotify::remove_playlist_items(String playlist_id, char** uris) { 
+response Spotify::remove_playlist_items(String playlist_id,int size, char** uris) { 
   String url = "https://api.spotify.com/v1/playlists/";
   url += playlist_id + "/tracks";
 
-  return RestApiDelete(const_cast<char*>(url.c_str()), array_to_json_array(uris));
+  return RestApiDelete(const_cast<char*>(url.c_str()), array_to_json_array(size, uris));
 }
 response Spotify::get_current_users_playlists(int limit, int offset) {
   String url = "https://api.spotify.com/v1/me/playlists";
@@ -733,9 +885,9 @@ response Spotify::get_show(String show_id) {
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::get_several_shows(char ** show_ids) {
+response Spotify::get_several_shows(int size,char ** show_ids) {
   String url = "https://api.spotify.com/v1/shows";
-  url += "?ids=" + array_to_string(show_ids);
+  url += "?ids=" + array_to_string(size, show_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -751,21 +903,21 @@ response Spotify::get_users_saved_shows(int limit, int offset) {
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::save_shows_for_current_user(char ** show_ids) {
+response Spotify::save_shows_for_current_user(int size,char ** show_ids) {
   String url = "https://api.spotify.com/v1/me/shows";
-  url += "?ids=" + array_to_string(show_ids);
+  url += "?ids=" + array_to_string(size, show_ids);
 
   return RestApiPut(const_cast<char*>(url.c_str()));
 }
-response Spotify::remove_shows_for_current_user(char ** show_ids) {
+response Spotify::remove_shows_for_current_user(int size,char ** show_ids) {
   String url = "https://api.spotify.com/v1/me/shows";
-  url += "?ids=" + array_to_string(show_ids);
+  url += "?ids=" + array_to_string(size, show_ids);
 
   return RestApiDelete(const_cast<char*>(url.c_str()));
 }
-response Spotify::check_users_saved_shows(char ** show_ids) {
+response Spotify::check_users_saved_shows(int size,char ** show_ids) {
   String url = "https://api.spotify.com/v1/me/shows/contains";
-  url += "?ids=" + array_to_string(show_ids);
+  url += "?ids=" + array_to_string(size, show_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -777,9 +929,9 @@ response Spotify::get_track(String track_id) {
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::get_several_tracks(char ** track_ids) {
+response Spotify::get_several_tracks(int size,char ** track_ids) {
   String url = "https://api.spotify.com/v1/tracks";
-  url += "?ids=" + array_to_string(track_ids);
+  url += "?ids=" + array_to_string(size, track_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -789,25 +941,25 @@ response Spotify::get_user_saved_tracks(int limit, int offset) {
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::save_tracks_for_current_user(char ** track_ids) {
+response Spotify::save_tracks_for_current_user(int size,char ** track_ids) {
   char url[] = "https://api.spotify.com/v1/me/tracks";
 
-  return RestApiPut(url, array_to_json_array(track_ids));
+  return RestApiPut(url, array_to_json_array(size, track_ids));
 }
-response Spotify::remove_user_saved_tracks(char ** track_ids) {
+response Spotify::remove_user_saved_tracks(int size,char ** track_ids) {
   char url[] = "https://api.spotify.com/v1/me/tracks";
 
-  return RestApiDelete(url, array_to_json_array(track_ids));
+  return RestApiDelete(url, array_to_json_array(size, track_ids));
 }
-response Spotify::check_user_saved_tracks(char ** track_ids) {
+response Spotify::check_user_saved_tracks(int size,char ** track_ids) {
   String url = "https://api.spotify.com/v1/me/tracks/contains";
-  url += "?ids=" + array_to_string(track_ids);
+  url += "?ids=" + array_to_string(size, track_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::get_tracks_audio_features(char ** track_ids) {
+response Spotify::get_tracks_audio_features(int size,char ** track_ids) {
   String url = "https://api.spotify.com/v1/audio-features";
-  url += "?ids=" + array_to_string(track_ids);
+  url += "?ids=" + array_to_string(size, track_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -823,15 +975,15 @@ response Spotify::get_track_audio_analysis(String track_id) {
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::get_recommendations(int limit, recommendations recommendations){
+response Spotify::get_recommendations(recommendations& recom, int limit){
   String url = "https://api.spotify.com/v1/recommendations";
   url += "?limit=" + String(limit);
-  std::map<String, String> string_params;
+  std::map<String, String> char_params;
   std::map<String, float> float_params;
-  populate_float_values(float_params, recommendations);
-  populate_string_values(string_params, recommendations);
+  populate_float_values(float_params, recom);
+  populate_char_values(char_params, recom); 
 
-  for (const auto& param : string_params) {
+  for (const auto& param : char_params) {
     url += "&" + param.first + "=" + param.second;
   }
 
@@ -841,164 +993,7 @@ response Spotify::get_recommendations(int limit, recommendations recommendations
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-bool Spotify::is_valid_value(float param) {
-  return param >= 0.0 && param <= 1.0;
-}
-bool Spotify::is_valid_value(const String& param) {
-  return !param.isEmpty();
-}
-void Spotify::populate_float_values(std::map<String, float>& float_params, recommendations recommendations){
-   if (is_valid_value(recommendations.min_acousticness)) {
-    float_params["min_acousticness"] = recommendations.min_acousticness;
-  }
-  if (is_valid_value(recommendations.max_acousticness)) {
-    float_params["max_acousticness"] = recommendations.max_acousticness;
-  }
-  if (is_valid_value(recommendations.target_acousticness)) {
-    float_params["target_acousticness"] = recommendations.target_acousticness;
-  }
 
-  if (is_valid_value(recommendations.min_danceability)) {
-    float_params["min_danceability"] = recommendations.min_danceability;
-  }
-  if (is_valid_value(recommendations.max_danceability)) {
-    float_params["max_danceability"] = recommendations.max_danceability;
-  }
-  if (is_valid_value(recommendations.target_danceability)) {
-    float_params["target_danceability"] = recommendations.target_danceability;
-  }
-
-  if (is_valid_value(recommendations.min_duration_ms)) {
-    float_params["min_duration_ms"] = recommendations.min_duration_ms;
-  }
-  if (is_valid_value(recommendations.max_duration_ms)) {
-    float_params["max_duration_ms"] = recommendations.max_duration_ms;
-  }
-  if (is_valid_value(recommendations.target_duration_ms)) {
-    float_params["target_duration_ms"] = recommendations.target_duration_ms;
-  }
-
-  if (is_valid_value(recommendations.min_energy)) {
-    float_params["min_energy"] = recommendations.min_energy;
-  }
-  if (is_valid_value(recommendations.max_energy)) {
-    float_params["max_energy"] = recommendations.max_energy;
-  }
-  if (is_valid_value(recommendations.target_energy)) {
-    float_params["target_energy"] = recommendations.target_energy;
-  }
-
-  if (is_valid_value(recommendations.min_instrumentalness)) {
-    float_params["min_instrumentalness"] = recommendations.min_instrumentalness;
-  }
-  if (is_valid_value(recommendations.max_instrumentalness)) {
-    float_params["max_instrumentalness"] = recommendations.max_instrumentalness;
-  }
-  if (is_valid_value(recommendations.target_instrumentalness)) {
-    float_params["target_instrumentalness"] = recommendations.target_instrumentalness;
-  }
-
-  if (is_valid_value(recommendations.min_key)) {
-    float_params["min_key"] = recommendations.min_key;
-  }
-  if (is_valid_value(recommendations.max_key)) {
-    float_params["max_key"] = recommendations.max_key;
-  }
-  if (is_valid_value(recommendations.target_key)) {
-    float_params["target_key"] = recommendations.target_key;
-  }
-
-  if (is_valid_value(recommendations.min_liveness)) {
-    float_params["min_liveness"] = recommendations.min_liveness;
-  }
-  if (is_valid_value(recommendations.max_liveness)) {
-    float_params["max_liveness"] = recommendations.max_liveness;
-  }
-  if (is_valid_value(recommendations.target_liveness)) {
-    float_params["target_liveness"] = recommendations.target_liveness;
-  }
-
-  if (is_valid_value(recommendations.min_loudness)) {
-    float_params["min_loudness"] = recommendations.min_loudness;
-  }
-  if (is_valid_value(recommendations.max_loudness)) {
-    float_params["max_loudness"] = recommendations.max_loudness;
-  }
-  if (is_valid_value(recommendations.target_loudness)) {
-    float_params["target_loudness"] = recommendations.target_loudness;
-  }
-
-  if (is_valid_value(recommendations.min_mode)) {
-    float_params["min_mode"] = recommendations.min_mode;
-  }
-  if (is_valid_value(recommendations.max_mode)) {
-    float_params["max_mode"] = recommendations.max_mode;
-  }
-  if (is_valid_value(recommendations.target_mode)) {
-    float_params["target_mode"] = recommendations.target_mode;
-  }
-
-  if (is_valid_value(recommendations.min_popularity)) {
-    float_params["min_popularity"] = recommendations.min_popularity;
-  }
-  if (is_valid_value(recommendations.max_popularity)) {
-    float_params["max_popularity"] = recommendations.max_popularity;
-  }
-  if (is_valid_value(recommendations.target_popularity)) {
-    float_params["target_popularity"] = recommendations.target_popularity;
-  }
-
-  if (is_valid_value(recommendations.min_speechiness)) {
-    float_params["min_speechiness"] = recommendations.min_speechiness;
-  }
-  if (is_valid_value(recommendations.max_speechiness)) {
-    float_params["max_speechiness"] = recommendations.max_speechiness;
-  }
-  if (is_valid_value(recommendations.target_speechiness)) {
-    float_params["target_speechiness"] = recommendations.target_speechiness;
-  }
-
-  if (is_valid_value(recommendations.min_tempo)) {
-    float_params["min_tempo"] = recommendations.min_tempo;
-  }
-  if (is_valid_value(recommendations.max_tempo)) {
-    float_params["max_tempo"] = recommendations.max_tempo;
-  }
-  if (is_valid_value(recommendations.target_tempo)) {
-    float_params["target_tempo"] = recommendations.target_tempo;
-  }
-
-  if (is_valid_value(recommendations.min_time_signature)) {
-    float_params["min_time_signature"] = recommendations.min_time_signature;
-  }
-  if (is_valid_value(recommendations.max_time_signature)) {
-    float_params["max_time_signature"] = recommendations.max_time_signature;
-  }
-  if (is_valid_value(recommendations.target_time_signature)) {
-    float_params["target_time_signature"] = recommendations.target_time_signature;
-  }
-
-  if (is_valid_value(recommendations.min_valence)) {
-    float_params["min_valence"] = recommendations.min_valence;
-  }
-  if (is_valid_value(recommendations.max_valence)) {
-    float_params["max_valence"] = recommendations.max_valence;
-  }
-  if (is_valid_value(recommendations.target_valence)) {
-    float_params["target_valence"] = recommendations.target_valence;
-  }
-}
-void Spotify::populate_string_values(std::map<String, String>& string_params, recommendations recommendations){
-  if (is_valid_value(recommendations.seed_artists)) {
-    string_params["seed_artists"] = recommendations.seed_artists;
-  }
-  if (is_valid_value(recommendations.seed_genres)) {
-    string_params["seed_genres"] = recommendations.seed_genres;
-  }
-  if (is_valid_value(recommendations.seed_tracks)) {
-    string_params["seed_tracks"] = recommendations.seed_tracks;
-  }
-}
 //Users
 response Spotify::get_current_user_profile() {
   char url[] = "https://api.spotify.com/v1/me";
@@ -1036,27 +1031,27 @@ response Spotify::get_followed_artists(String type, String after, int limit) {
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::follow_artists_or_users(String type, char** artist_user_ids) {
+response Spotify::follow_artists_or_users(String type,int size, char** artist_user_ids) {
   String url = "https://api.spotify.com/v1/me/following";
   url += "?type=" + type;
 
-  return RestApiPut(const_cast<char*>(url.c_str()), array_to_json_array(artist_user_ids));
+  return RestApiPut(const_cast<char*>(url.c_str()), array_to_json_array(size, artist_user_ids));
 }
-response Spotify::unfollow_artists_or_users(String type, char** artist_user_ids) {
+response Spotify::unfollow_artists_or_users(String type,int size, char** artist_user_ids) {
   String url = "https://api.spotify.com/v1/me/following";
   url += "?type=" + type;
 
-  return RestApiDelete(const_cast<char*>(url.c_str()), array_to_json_array(artist_user_ids));
+  return RestApiDelete(const_cast<char*>(url.c_str()), array_to_json_array(size, artist_user_ids));
 }
-response Spotify::check_if_user_follows_artists_or_users(String type, char** artist_user_ids) {
+response Spotify::check_if_user_follows_artists_or_users(String type,int size, char** artist_user_ids) {
   String url = "https://api.spotify.com/v1/me/following/contains";
-  url += "?type=" + type + "&ids=" + array_to_string(artist_user_ids);
+  url += "?type=" + type + "&ids=" + array_to_string(size, artist_user_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
-response Spotify::check_if_users_follow_playlist(String playlist_id, char** user_ids) {
+response Spotify::check_if_users_follow_playlist(String playlist_id,int size, char** user_ids) {
   String url = "https://api.spotify.com/v1/playlists/";
-  url += playlist_id + "/followers/contains?ids=" + array_to_string(user_ids);
+  url += playlist_id + "/followers/contains?ids=" + array_to_string(size, user_ids);
 
   return RestApiGet(const_cast<char*>(url.c_str()));
 }
@@ -1136,6 +1131,6 @@ String Spotify::convert_id_to_uri(String id, String type){
 void print_response(response response_obj){
   Serial.print("Status: ");
   Serial.println(response_obj.status_code);
-  /*Serial.print("Reply: ");
-  Serial.println(response_obj.reply);*/
+  Serial.print("Reply: ");
+  Serial.println(response_obj.reply);
 }

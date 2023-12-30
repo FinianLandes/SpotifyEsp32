@@ -15,16 +15,17 @@ char* refresh_token="AQAichrGMfjjDHYWIAENJYyWoi_KpzLZ93_HSS30J8zULeuHRPmF9-Wh3aS
 
 using namespace Spotify_types;
 
-Spotify sp(refresh_token, redirect_uri, client_id, client_secret, true);
+Spotify sp(refresh_token, redirect_uri, client_id, client_secret, false);
+
 String song_id = "2NTCi4wGypj56t843jb3Mt";
 String track_id = "2NTCi4wGypj56t843jb3Mt";
 char* track_ids[] = {"7ouMYWpwJ422jRcDASZB7P","4VqPOruhp5EdPBeR92t6lQ","2takcwOaAZWiXQijPHIx7B"};
 
 String album_id = "7iLuHJkrb9KHPkMgddYigh";
-char* album_ids[] = {"7iLuHJkrb9KHPkMgddYigh","4KAtLRVIfB0bKnRY01dveY","2SxoeF005n621Jca66RRdu", nullptr};
+char* album_ids[] = {"7iLuHJkrb9KHPkMgddYigh","4KAtLRVIfB0bKnRY01dveY","2SxoeF005n621Jca66RRdu"};
 
 String artist_id = "7orlzf5LTqSnCzURkZFebN";
-char* artist_ids[] = {"7orlzf5LTqSnCzURkZFebN","0lNJF6sbrXXPubqKkkyK23","3JsMj0DEzyWc0VDlHuy9Bx",nullptr};
+char* artist_ids[] = {"7orlzf5LTqSnCzURkZFebN","0lNJF6sbrXXPubqKkkyK23","3JsMj0DEzyWc0VDlHuy9Bx"};
 
 String audiobook_id = "7iHfbu1YPACw6oZPAFJtqe";
 char* audiobook_ids[] = {"7iHfbu1YPACw6oZPAFJtqe","1HGw3J3NxZO1TP1BTtVhpZ","7iHfbu1YPACw6oZPAFJtqe"};
@@ -52,16 +53,7 @@ char* artist_user_ids[] = {"2CIMQHirSU0MQqyYHq0eOx","57dN52uHvrHOxijzpIgu3E","1v
 void setup() {
   Serial.begin(115200);
   connectToWifi();
-  //Create a list of track uris from track ids-
-  char* track_uri[] = {strdup(sp.convert_id_to_uri(song_id, TYPE_TRACK).c_str())};
-  Serial.println(track_uri[0]);
-  Serial.println("update_playlist_items: ");
-  print_response(sp.update_playlist_items(playlist_id, track_uri));
-
-  test_playlist();
-  test_shows();
-  test_tracks();
-  test_users();
+  
 }
 void loop() {
   // put your main code here, to run repeatedly:
@@ -135,7 +127,7 @@ void test_albums(){
   print_response(sp.get_album(album_id));
 
   Serial.print("Get Albums: ");
-  print_response(sp.get_albums(album_ids));
+  print_response(sp.get_albums(3,album_ids));
 
   Serial.print("Get Album Tracks: ");
   print_response(sp.get_album_tracks(album_id, 1, 0));
@@ -144,13 +136,13 @@ void test_albums(){
   print_response(sp.get_users_saved_albums(1, 0));
 
   Serial.print("Remove Saved Albums: ");
-  print_response(sp.remove_users_saved_albums(album_ids));
+  print_response(sp.remove_users_saved_albums(3,album_ids));
 
   Serial.print("Save Albums: ");
-  print_response(sp.save_albums_for_current_user(album_ids)); 
+  print_response(sp.save_albums_for_current_user(3,album_ids)); 
  
   Serial.print("Check if Album Saved: ");
-  print_response(sp.check_useres_saved_albums(album_ids));
+  print_response(sp.check_useres_saved_albums(3,album_ids));
 
   Serial.print("Get Releases: ");
   print_response(sp.get_new_releases("CH", 1, 0));
@@ -160,7 +152,7 @@ void test_artist(){
   Serial.println("Get Artist: ");
   print_response(sp.get_artist(artist_id));
   Serial.println("Get Artists: ");
-  print_response(sp.get_several_artists(artist_ids));
+  print_response(sp.get_several_artists(3,artist_ids));
   Serial.println("Get Artist Albums: ");
   print_response(sp.get_artist_albums(artist_id, GROUP_ALBUM +","+GROUP_SINGLE, 1, 0));
   Serial.println("Get Artist top Tracks: ");
@@ -174,7 +166,7 @@ void test_audiobooks(){
   Serial.println("Get Audibook: ");
   print_response(sp.get_audiobook(audiobook_id));
   Serial.println("Get Audibooks: ");
-  print_response(sp.get_several_audiobooks(audiobook_ids));
+  print_response(sp.get_several_audiobooks(3,audiobook_ids));
   //500
   Serial.println("Get Audibook Chapters: ");
   print_response(sp.get_audiobook_chapters(audiobook_id, 1, 0));
@@ -182,19 +174,18 @@ void test_audiobooks(){
   Serial.println("Get Users Audibooks: ");
   print_response(sp.get_users_audiobooks(0, 1));
   Serial.println("Save Audibook for user: ");
-  print_response(sp.save_audiobooks_for_current_user(audiobook_ids));
+  print_response(sp.save_audiobooks_for_current_user(3,audiobook_ids));
   Serial.println("Check audiobooks: ");
-  print_response(sp.check_users_saved_audiobooks(audiobook_ids));
+  print_response(sp.check_users_saved_audiobooks(3,audiobook_ids));
   Serial.println("Remove Audiobooks: ");
-  print_response(sp.remove_audiobooks_for_current_user(audiobook_ids));
+  print_response(sp.remove_audiobooks_for_current_user(3,audiobook_ids));
 }
 //Working, only available in US, UK, New Zealand, Australia
 void test_chapters(){
-  //404
   Serial.print("get chapter: ");
   print_response(sp.get_chapter(chapter_id));
   Serial.print("get chapter: ");
-  print_response(sp.get_several_chapters(chapter_ids));
+  print_response(sp.get_several_chapters(3,chapter_ids));
 }
 //working
 void test_categories(){
@@ -210,19 +201,19 @@ void test_episodes(){
   print_response(sp.get_episode(episode_id));
 
   Serial.println("get_several_episodes: ");
-  print_response(sp.get_several_episodes(episode_ids));
+  print_response(sp.get_several_episodes(2,episode_ids));
 
   Serial.println("get_users_saved_episodes: ");
   print_response(sp.get_users_saved_episodes());
 
   Serial.println("save_episodes_for_current_user: ");
-  print_response(sp.save_episodes_for_current_user(episode_ids));
+  print_response(sp.save_episodes_for_current_user(2,episode_ids));
 
   Serial.println("check_users_saved_episodes: ");
-  print_response(sp.check_users_saved_episodes(episode_ids));
+  print_response(sp.check_users_saved_episodes(2,episode_ids));
 
   Serial.println("remove_episodes_for_current_user: ");
-  print_response(sp.remove_episodes_for_current_user(episode_ids));
+  print_response(sp.remove_episodes_for_current_user(2,episode_ids));
 
 
 }
@@ -249,12 +240,15 @@ void test_playlist(){
 
   String track_uri_str = sp.convert_id_to_uri(song_id, TYPE_TRACK);
   char* track_uri[] = {strdup(track_uri_str.c_str())};
+
   Serial.println("update_playlist_items: ");
-  print_response(sp.update_playlist_items(playlist_id, track_uri ));
+  print_response(sp.update_playlist_items(playlist_id,1, track_uri));
+
   Serial.println("add_items_to_playlist: ");
-  print_response(sp.add_items_to_playlist(playlist_id, track_uri, 1));
+  print_response(sp.add_items_to_playlist(playlist_id,1, track_uri, 1));
+
   Serial.println("remove_playlist_items: ");
-  print_response(sp.remove_playlist_items(playlist_id, track_uri));
+  print_response(sp.remove_playlist_items(playlist_id,1, track_uri));
 
   Serial.println("get_current_users_playlists: ");
   print_response(sp.get_current_users_playlists());
@@ -264,7 +258,7 @@ void test_playlist(){
 
   Serial.println("create_playlist: ");
   print_response(sp.create_playlist(user_id, "Test", true, false, "no"));
-
+  
   Serial.println("get_featured_playlists: ");
   print_response(sp.get_featured_playlists(country, locale, ""));
 
@@ -289,7 +283,7 @@ void test_shows(){
   print_response(sp.get_show(show_id));
 
   Serial.println("get_several_shows: ");
-  print_response(sp.get_several_shows(show_ids));
+  print_response(sp.get_several_shows(2,show_ids));
 
   Serial.println("get_show_episodes: ");
   print_response(sp.get_show_episodes(show_id));
@@ -298,13 +292,13 @@ void test_shows(){
   print_response(sp.get_users_saved_shows());
 
   Serial.println("save_shows_for_current_user: ");
-  print_response(sp.save_shows_for_current_user(show_ids));
+  print_response(sp.save_shows_for_current_user(2,show_ids));
 
   Serial.println("check_users_saved_shows: ");
-  print_response(sp.check_users_saved_shows(show_ids));
+  print_response(sp.check_users_saved_shows(2,show_ids));
 
   Serial.println("remove_shows_for_current_user: ");
-  print_response(sp.remove_shows_for_current_user(show_ids));
+  print_response(sp.remove_shows_for_current_user(2,show_ids));
 
 
 }
@@ -314,28 +308,35 @@ void test_tracks(){
   print_response(sp.get_track(track_id));
 
   Serial.println("get_several_tracks: ");
-  print_response(sp.get_several_tracks(track_ids));
+  print_response(sp.get_several_tracks(3,track_ids));
 
   Serial.println("get_user_saved_tracks: ");
   print_response(sp.get_user_saved_tracks());
 
   Serial.println("save_tracks_for_current_user: ");
-  print_response(sp.save_tracks_for_current_user(track_ids));
+  print_response(sp.save_tracks_for_current_user(3,track_ids));
 
   Serial.println("remove_user_saved_tracks: ");
-  print_response(sp.remove_user_saved_tracks(track_ids));
+  print_response(sp.remove_user_saved_tracks(3,track_ids));
 
   Serial.println("check_user_saved_tracks: ");
-  print_response(sp.check_user_saved_tracks(track_ids));
+  print_response(sp.check_user_saved_tracks(3,track_ids));
 
   Serial.println("get_tracks_audio_features: ");
-  print_response(sp.get_tracks_audio_features(track_ids));
+  print_response(sp.get_tracks_audio_features(3,track_ids));
 
   Serial.println("get_track_audio_features: ");
   print_response(sp.get_track_audio_features(track_id));
 
   Serial.println("get_track_audio_analysis: ");
   print_response(sp.get_track_audio_analysis(track_id));
+  char* track_seeds[] = {strdup(track_id.c_str())};
+  recommendations recom;
+  recom.seed_tracks = track_seeds;
+  recom.seed_tracks_size = 1;
+  recom.max_energy = 0.5;
+  Serial.println("get_recommendations: ");
+  print_response(sp.get_recommendations(recom, 1));
 }
 //working
 void test_users(){
@@ -358,16 +359,16 @@ void test_users(){
   print_response(sp.get_followed_artists(""));
 
   Serial.println("follow_artists_or_users: ");
-  print_response(sp.follow_artists_or_users(TYPE_ARTIST, artist_user_ids));
+  print_response(sp.follow_artists_or_users(TYPE_ARTIST, 3,artist_user_ids));
 
   Serial.println("unfollow_artists_or_users: ");
-  print_response(sp.unfollow_artists_or_users(TYPE_ARTIST, artist_user_ids));
+  print_response(sp.unfollow_artists_or_users(TYPE_ARTIST, 3,artist_user_ids));
 
   Serial.println("check_if_user_follows_artists_or_users: ");
-  print_response(sp.check_if_user_follows_artists_or_users(TYPE_ARTIST, artist_user_ids));
+  print_response(sp.check_if_user_follows_artists_or_users(TYPE_ARTIST,3, artist_user_ids));
   
   Serial.println("check_if_users_follow_playlist: ");
-  print_response(sp.check_if_users_follow_playlist(playlist_id, user_ids));
+  print_response(sp.check_if_users_follow_playlist(playlist_id, 3, user_ids));
 
 }
 
