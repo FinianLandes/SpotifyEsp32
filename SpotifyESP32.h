@@ -1,5 +1,21 @@
 #ifndef SpotifyESP32
 #define SpotifyESP32
+//#define ENABLE_PLAYER
+#define ENABLE_ALBUM
+//#define ENABLE_ARTIST
+//#define ENABLE_AUDIOBOOKS
+//#define ENABLE_CATEGORIES
+//#define ENABLE_CHAPTERS
+//#define ENABLE_EPISODES
+//#define ENABLE_GENRES
+//#define ENABLE_MARKETS
+//#define ENABLE_PLAYLISTS
+//#define ENABLE_SEARCH
+//#define ENABLE_SHOWS
+//define ENABLE_TRACKS
+//#define ENABLE_USERS
+//#define ENABLE_SIMPIFIED //Player needs to be enabled for this to work
+
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -9,29 +25,35 @@
 #include <UrlEncode.h>
 #include <map>
 #include <regex>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+
 
 namespace Spotify_types{
-  extern bool SHUFFLE_ON;//Shuffle on
-  extern bool SHUFFLE_OFF;//Shuffle off
-  extern char* REPEAT_OFF;//Repeat off
-  extern char* REPEAT_TRACK;//Repeat track
-  extern char* REPEAT_CONTEXT;//Repeat context
-  extern char* TYPE_ALBUM;//URI type album
-  extern char* TYPE_ARTIST;//URI type artist
-  extern char* TYPE_TRACK;//URI type track
-  extern char* TYPE_PLAYLIST;//URI type playlist
-  extern char* GROUP_ALBUM;//Get artist's albums include groups album
-  extern char* GROUP_SINGLE;//Get artist's albums include groups single
-  extern char* GROUP_APPEARS_ON;//Get artist's albums include groups appears on
-  extern char* GROUP_COMPILATION;//Get artist's albums include groups compilation
-  extern char* TIME_RANGE_SHORT;//4 weeks
-  extern char* TIME_RANGE_MEDIUM;//6 months
-  extern char* TIME_RANGE_LONG;//Several years
-  extern char* TOP_TYPE_ARTIST;//Users top artist's
-  extern char* TOP_TYPE_TRACKS;//Users top tracks
-  extern int SIZE_OF_URI;//Size to allocate for uri
-  extern int SIZE_OF_ID;//Size to allocate for id
+  extern const bool SHUFFLE_ON;//Shuffle on
+  extern const bool SHUFFLE_OFF;//Shuffle off
+  extern const char* REPEAT_OFF;//Repeat off
+  extern const char* REPEAT_TRACK;//Repeat track
+  extern const char* REPEAT_CONTEXT;//Repeat context
+  extern const char* TYPE_ALBUM;//URI type album
+  extern const char* TYPE_ARTIST;//URI type artist
+  extern const char* TYPE_TRACK;//URI type track
+  extern const char* TYPE_PLAYLIST;//URI type playlist
+  extern const char* GROUP_ALBUM;//Get artist's albums include groups album
+  extern const char* GROUP_SINGLE;//Get artist's albums include groups single
+  extern const char* GROUP_APPEARS_ON;//Get artist's albums include groups appears on
+  extern const char* GROUP_COMPILATION;//Get artist's albums include groups compilation
+  extern const char* TIME_RANGE_SHORT;//4 weeks
+  extern const char* TIME_RANGE_MEDIUM;//6 months
+  extern const char* TIME_RANGE_LONG;//Several years
+  extern const char* TOP_TYPE_ARTIST;//Users top artist's
+  extern const char* TOP_TYPE_TRACKS;//Users top tracks
+  extern const int SIZE_OF_URI;//Size to allocate for uri
+  extern const int SIZE_OF_ID;//Size to allocate for id
 };
+
+
 typedef struct{
   int status_code;
   String reply;
@@ -93,120 +115,203 @@ void print_response(response response_obj);//Print response object
 
 class Spotify {
   public:
-    Spotify(const char* refresh_token, const char* redirect_uri,const char* client_id,const char* client_secret, bool debug_on);
-    Spotify(const char* refresh_token, const char* redirect_uri,const char* client_id,const char* client_secret, bool debug_on, int max_num_retry);
-    Spotify(const char* refresh_token, const char* redirect_uri,const char* client_id,const char* client_secret); 
+    ///@brief Constructor for Spotify object
+    ///@param refresh_token Refresh token from Spotify(Required)
+    ///@param redirect_uri Redirect uri from Spotify(Required)
+    ///@param client_id Client id from Spotify(Required)
+    ///@param client_secret Client secret from Spotify(Required)
+    ///@param debug_on Debug mode on or off(default off)
+    ///@param max_num_retry Max number of retries for a request(default 3)
+    Spotify(const char* refresh_token, const char* redirect_uri,const char* client_id,const char* client_secret, bool debug_on = false, int max_num_retry =3);
     //Player
-    /*@brief Get information about the user's current playback state, including track, track progress, and active device.
-    * @return response object containing http status code and reply
-    */
+  #ifdef ENABLE_PLAYER
+    ///@brief Get information about the user's current playback state, including track, track progress, and active device.
+    ///@return response object containing http status code and reply
     response currently_playing();
-    /*@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. If no     context is provided, the user's currently playing context (e.g. album, playlist, etc.) is the target.
-    * @param context_uri Spotify URI of the context to play (Required)
-    * @param offset Indicates from where in the context playback should start, Only works with albums or Playlists(Optional)
-    * @param position_ms Indicates from what position in the context playback should start in milliseconds(Optional)
-    * @param device_id Id of the device this command is targeting (Optional)
-    * @return response object containing http status code and reply
-    */
+    ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. If no     context is provided, the user's currently playing context (e.g. album, playlist, etc.) is the target.
+    ///@param context_uri Spotify URI of the context to play (Required)
+    ///@param offset Indicates from where in the context playback should start, Only works with albums or Playlists(Optional)
+    ///@param position_ms Indicates from what position in the context playback should start in milliseconds(Optional)
+    ///@param device_id Id of the device this command is targeting (Optional)
+    ///@return response object containing http status code and reply
     response start_resume_playback(char* context_uri, int offset = 0, int position_ms = 0, char* device_id = nullptr);
-    /*@brief Start or resume playback.
-    * @param size Number of uris in uris array
-    * @param uris Array of Spotify URIs of the tracks to play
-    * @param device_id Id of the device this command is targeting (Optional)
-    * @return response object containing http status code and reply
-    */
+    ///@brief Start or resume playback.
+    ///@param size Number of uris in uris array
+    ///@param uris Array of Spotify URIs of the tracks to play
+    ///@param device_id Id of the device this command is targeting (Optional)
+    ///@return response object containing http status code and reply
     response start_resume_playback(int size, char ** uris ,char* device_id = nullptr);
-    /*@brief Start or resume playback on provided device
-    * @param device_id Id of the device this command is targeting(Optional)
-    * @return response object containing http status code and reply
-    */
+    ///@brief Start or resume playback on provided device
+    ///@param device_id Id of the device this command is targeting(Optional)
+    ///@return response object containing http status code and reply
     response start_resume_playback(char* device_id = nullptr);
-    /*@brief Pause playback on Spotify
-    * @return response object containing http status code and reply
-    */
+    ///@brief Pause playback on Spotify
+    ///@return response object containing http status code and reply
     response pause_playback();
-    /*@brief Skip to next track
-    * @return response object containing http status code and reply
-    */
+    ///@brief Skip to next track
+    ///@return response object containing http status code and reply
     response skip();
-    /*@brief Skip to previous track
-    * @return response object containing http status code and reply
-    */
+    ///@brief Skip to previous track
+    ///@return response object containing http status code and reply
     response previous();
-    /*@brief get information about the user's available devices
-    * @return response object containing http status code and reply
-    */
+    ///@brief get information about the user's available devices
+    ///@return response object containing http status code and reply
     response available_devices();
-    /*@brief get information about the user's current playback state, including track, track progress, and active device, shuffle etc.
-    * @return response object containing http status code and reply
-    */
+    ///@brief get information about the user's current playback state, including track, track progress, and active device, shuffle etc.
+    ///@return response object containing http status code and reply
     response current_playback_state();
-    /*@brief Get recently played tracks
-    * @param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
-    */
+    ///@brief Get recently played tracks
+    ///@param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
     response recently_played_tracks(int limit = 10);
-    /*@brief Seek to position of current context
-    * @param time_ms Position in milliseconds to seek to, if the value is greater than the length of the track the player will skip to the next track
-    * @return response object containing http status code and reply
-    */
+    ///@brief Seek to position of current context
+    ///@param time_ms Position in milliseconds to seek to, if the value is greater than the length of the track the player will skip to the next track
+    ///@return response object containing http status code and reply
     response seek_to_position(int time_ms);
-    /*@brief get users queue, response can be empty or containing episode or track objects
-    * @return response object containing http status code and reply
-    */
+    ///@brief get users queue, response can be empty or containing episode or track objects
+    ///@return response object containing http status code and reply
     response get_queue();
-    /*@Brief Set repeat mode, allowed values are REPEAT_OFF, REPEAT_TRACK, REPEAT_CONTEXT
-    * @param mode Repeat mode
-    * @return response object containing http status code and reply
-    */
+    ///@Brief Set repeat mode, allowed values are REPEAT_OFF, REPEAT_TRACK, REPEAT_CONTEXT
+    ///@param mode Repeat mode
+    ///@return response object containing http status code and reply
     response repeat_mode(char* mode);
-    /*@Brief Set shuffle mode, allowed values are SHUFFLE_ON, SHUFFLE_OFF
-    * @param mode Shuffle mode
-    * @return response object containing http status code and reply
-    */
+    ///@Brief Set shuffle mode, allowed values are SHUFFLE_ON, SHUFFLE_OFF
+    ///@param mode Shuffle mode
+    ///@return response object containing http status code and reply
     response shuffle(bool mode);
-    /*@Brief Transfer playback to another device
-    * @param device_id Id of the device this command is targeting
-    * @return response object containing http status code and reply
-    */
+    ///@Brief Transfer playback to another device
+    ///@param device_id Id of the device this command is targeting
+    ///@return response object containing http status code and reply
     response transfer_playback(char* device_id);
-    /*@Brief Set volume, does not work with all devices(eg. does not work on Phones)
-    * @param value Volume value between 0 and 100
-    * @return response object containing http status code and reply
-    */
+    ///@Brief Set volume, does not work with all devices(eg. does not work on Phones)
+    ///@param value Volume value between 0 and 100
+    ///@return response object containing http status code and reply
     response set_volume(int value);
-    /*@Brief Add context to queue 
-    * @param context_uri Spotify URI of the context to add to queue
-    */
+    ///@Brief Add context to queue 
+    ///@param context_uri Spotify URI of the context to add to queue
     response add_to_queue(char* context_uri);
+    #endif
+  #ifdef ENABLE_ALBUM
     //Albums
+    ///@brief Get Spotify information for a single album.
+    ///@param album_id Spotify ID of the album
+    ///@return response object containing http status code and reply
     response get_album(char* album_id);
+    ///@brief Get Spotify information for multiple albums identified by their Spotify IDs.
+    ///@param size Number of album ids in album_ids array
+    ///@param album_ids Array of Spotify IDs of the albums
+    ///@return response object containing http status code and reply
     response get_albums(int size,  char** album_ids);
+    ///@brief Get Spotify information about an album's tracks. 
+    ///@param album_id Spotify ID of the album
+    ///@param limit The maximum number of tracks to return. Default: 10. Minimum: 1. Maximum: 50
+    ///@param offset The index of the first track to return. Default: 0 (the first object). Use with limit to get the next set of tracks.
+    ///@return response object containing http status code and reply
     response get_album_tracks(char* album_id, int limit = 10, int offset = 0);
+    ///@brief Get Albums saved to the current user's  music library.
+    ///@param limit The maximum number of albums to return. Default: 10. Minimum: 1. Maximum: 50
+    ///@param offset The index of the first album to return. Default: 0 (the first object). Use with limit to get the next set of albums.
+    ///@return response object containing http status code and reply
     response get_users_saved_albums(int limit = 10, int offset = 0);
+    ///@brief Save one or more albums to the current user's  music library.
+    ///@param size Number of album ids in album_ids array
+    ///@param album_ids Array of Spotify IDs of the albums
+    ///@return response object containing http status code and reply
     response save_albums_for_current_user(int size,  char** album_ids);
+    ///@brief Remove one or more albums from the current user's  music library.
+    ///@param size Number of album ids in album_ids array
+    ///@param album_ids Array of Spotify IDs of the albums
+    ///@return response object containing http status code and reply
     response remove_users_saved_albums(int size,  char** album_ids);
+    ///@brief Check if one or more albums is already saved in the current Spotify user's  music library.
+    ///@param size Number of album ids in album_ids array
+    ///@param album_ids Array of Spotify IDs of the albums
+    ///@return response object containing http status code and reply
     response check_useres_saved_albums(int size,  char** album_ids);
-    response get_new_releases(char* country, int limit = 10, int offset = 0);
+    ///@brief Get a list of new album releases featured in Spotify
+    ///@param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
+    ///@param offset The index of the first item to return. Default: 0 (the first object). Use with limit to get the next set of items.
+    ///@param country A country: an ISO 3166-1 alpha-2 country code. Provide this parameter if you want the list of returned items to be relevant to a particular country.
+    ///@return response object containing http status code and reply
+    response get_new_releases(int limit = 10, int offset = 0, char* country ="");
+    #endif
+  #ifdef ENABLE_ARTIST
     //Artists
+    ///@brief Get Spotify information for a single artist
+    ///@param artist_id Spotify ID of the artist
+    ///@return response object containing http status code and reply
     response get_artist(char* artist_id);
+    ///@brief Get Spotify information for multiple artists 
+    ///@param size Number of artist ids in artist_ids array
+    ///@param artist_ids Array of Spotify IDs of the artists
+    ///@return response object containing http status code and reply
     response get_several_artists(int size,  char** artist_ids);
+    ///@brief Get Spotify information about an artist's albums
+    ///@param artist_id Spotify ID of the artist
+    ///@param size_groups Number of groups in include_groups array
+    ///@param include_groups Array of groups to include in the response. Valid values are GROUP_ALBUM, GROUP_SINGLE, GROUP_APPEARS_ON, GROUP_COMPILATION or any combination of these.
+    ///@param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
+    ///@param offset The index of the first album to return. Default: 0 (the first object). Use with limit to get the next set of albums.
+    ///@return response object containing http status code and reply
     response get_artist_albums(char* artist_id,int size_groups, char** include_groups, int limit = 10, int offset = 0);
-    response get_artist_top_tracks(char* artist_id, char* country);
+    ///@brief Get Spotify information about an artist's top tracks
+    ///@param artist_id Spotify ID of the artist
+    ///@param country An ISO 3166-1 alpha-2 country code or the string from_token. Provide this parameter if you want the list of returned items to be relevant to a particular country.
+    ///@return response object containing http status code and reply
+    response get_artist_top_tracks(char* artist_id, char* country = nullptr);
+    ///@brief Get Spotify information about artists related to a single artist
+    ///@param artist_id Spotify ID of the artist
+    ///@return response object containing http status code and reply
     response get_artist_related_artist(char* artist_id);
+    #endif
+  #ifdef ENABLE_AUDIOBOOKS
     //Audiobooks (Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
+    ///@brief Get Spotify information for a single audiobook
+    ///@param audiobook_id Spotify ID of the audiobook
+    ///@return response object containing http status code and reply
     response get_audiobook(char* audiobook_id);
+    ///@brief Get Spotify information for multiple audiobooks
+    ///@param size Number of audiobook ids in audiobook_ids array
+    ///@param audiobook_ids Array of Spotify IDs of the audiobooks
+    ///@return response object containing http status code and reply
     response get_several_audiobooks(int size,  char** audiobook_ids);
+    ///@brief Get Spotify information about an audiobook's chapters
+    ///@param audiobook_id Spotify ID of the audiobook
+    ///@param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
+    ///@param offset The index of the first chapter to return. Default: 0 (the first object). Use with limit to get the next set of chapters.
+    ///@return response object containing http status code and reply
     response get_audiobook_chapters(char* audiobook_id, int limit = 10, int offset = 0);
+    /// @brief 
+    /// @param limit 
+    /// @param offset 
+    /// @return 
     response get_users_audiobooks(int limit = 10, int offset = 0);
+    /// @brief Save one or more audiobooks to the current user's  music library
+    /// @param size Number of audiobook ids in audiobook_ids array
+    /// @param audiobook_ids Array of Spotify IDs of the audiobooks
+    /// @return response object containing http status code and reply
     response save_audiobooks_for_current_user(int size,  char** audiobook_ids);
+    /// @brief Remove one or more audiobooks from the current user's  music library
+    /// @param size Number of audiobook ids in audiobook_ids array
+    /// @param audiobook_ids Array of Spotify IDs of the audiobooks
+    /// @return response object containing http status code and reply
     response remove_audiobooks_for_current_user(int size,  char** audiobook_ids);
+    /// @brief Check if one or more audiobooks is already saved in the current Spotify user's  music library
+    /// @param size Number of audiobook ids in audiobook_ids array
+    /// @param audiobook_ids Array of Spotify IDs of the audiobooks
+    /// @return response object containing http status code and reply
     response check_users_saved_audiobooks(int size,  char** audiobook_ids);
+    #endif
+  #ifdef ENABLE_CATEGORIES
     //Categories
     response get_several_browse_categories(char* country, char* locale, int limit = 10, int offset = 0);
     response get_single_browse_category(char* category_id, char* country, char* locale);
+    #endif
+  #ifdef ENABLE_CHAPTERS
     //Chapters (Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
     response get_chapter(char* chapter_id);
     response get_several_chapters(int size,  char** chapter_ids);
+    #endif
+  #ifdef ENABLE_EPISODES
     //Episodes
     response get_episode(char* episode_id);
     response get_several_episodes(int size,  char** episode_ids);
@@ -214,10 +319,16 @@ class Spotify {
     response save_episodes_for_current_user(int size,  char** episode_ids);
     response remove_episodes_for_current_user(int size,  char** episode_ids);
     response check_users_saved_episodes(int size,  char** episode_ids);
+    #endif
+  #ifdef ENABLE_GENRES
     //Genres
     response get_available_genre_seeds();
+    #endif
+  #ifdef ENABLE_MARKETS
     //Markets
     response get_available_markets();
+    #endif
+  #ifdef ENABLE_PLAYLISTS
     //Playlists
     response get_playlist(char* playlist_id, char* fields);
     response change_playlist_details(char* playlist_id, char* name, bool is_public, bool is_collaborative, char* description);
@@ -232,8 +343,12 @@ class Spotify {
     response get_category_playlists(char* category_id, char* country, int limit = 10, int offset = 0);
     response get_playlist_cover_image(char* playlist_id);
     response add_custom_playlist_cover_image(char* playlist_id, char* data);
+    #endif
+  #ifdef ENABLE_SEARCH
     //Search
     response search(char* q, char* type, int limit = 10, int offset = 0);
+    #endif
+  #ifdef ENABLE_SHOWS
     //Shows
     response get_show(char* show_id);
     response get_several_shows(int size,  char** show_ids);
@@ -242,6 +357,8 @@ class Spotify {
     response save_shows_for_current_user(int size,  char** show_ids);
     response remove_shows_for_current_user(int size,  char** show_ids);
     response check_users_saved_shows(int size,  char** show_ids);
+    #endif
+  #ifdef ENABLE_TRACKS
     //Tracks
     response get_track(char* track_id);
     response get_several_tracks(int size,  char** track_ids);
@@ -253,7 +370,8 @@ class Spotify {
     response get_track_audio_features(char* track_id);
     response get_track_audio_analysis(char* track_id);
     response get_recommendations(recommendations& recom, int limit = 10);
-    
+    #endif
+  #ifdef ENABLE_USERS    
     //Users
     response get_current_user_profile();
     response get_user_top_items(char* type, char* time_range = "medium_term", int limit = 10, int offset = 0);
@@ -265,21 +383,25 @@ class Spotify {
     response unfollow_artists_or_users(char* type, int size,  char** artist_user_ids);
     response check_if_user_follows_artists_or_users(char* type, int size,  char** artist_user_ids);
     response check_if_users_follow_playlist(char* playlist_id, int size,  char** user_ids);
-
+    #endif
+  #ifdef ENABLE_SIMPIFIED
     //Simplified versions of the above
     String current_track_name();
     String current_track_id();
     String current_device_id();
     String current_artist_names();
     char* current_device_id(char* device_id);
-    
+    char* current_track_id(char* track_id);
+    char* current_track_name(char* track_name);
+    char* current_artist_names(char* artist_names);
+    bool is_playing();
+    #endif
     //String convert_id_to_uri(String id, String type);
     char convert_id_to_uri(char* id, char* type);
     char* convert_id_to_uri(char* id, char* type, char* uri); 
-    bool is_playing();
+    
 
   private:
-  
     static const int _max_num_items = 20;//Number of items to be sent in one request
     static const int _max_char_size = 35*_max_num_items + 150;// 35 beeing the size of a uri + comma + 150 as buffer for url etc.
     static const int _size_of_uri = 45;
@@ -300,16 +422,16 @@ class Spotify {
     response RestApiDelete(char* rest_url, char* payload = nullptr);
     response RestApiGet(char* rest_url); 
 
-    char* array_to_char(int size,  char** array);//Convert array of chars to one comma separated char
+    char* array_to_char(int size,  char** array, char* result);//Convert array of chars to one comma separated char
     void array_to_json_array(int size,  char** array, char* data, int data_size = _max_char_size);//Convert array of chars to one json array
+  #ifdef ENABLE_TRACKS
     bool is_valid_value(float param);//Check if recommendation value is valid
     bool is_valid_value(int param);//Check if recommendation value is valid
     void populate_char_values(std::map<char*, char*>& map, recommendations& recom);//Populate recommendation char values
     void populate_float_values(std::map<char*, float>& map, recommendations& recom);//Populate recommendation float values
-    const char * extract_endpoint(char* rest_url);//Extract endpoint from url with regex
-
-
-
+  #endif
+    const char * extract_endpoint(const char* rest_url);//Extract endpoint from url with regex
+    
     const char* _spotify_root_ca = \
     "-----BEGIN CERTIFICATE-----\n" \
     "MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\n" \

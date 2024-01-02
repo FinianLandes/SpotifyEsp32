@@ -22,22 +22,8 @@ namespace Spotify_types{
   int SIZE_OF_ID = 40;
   int SIZE_OF_URI = 50;
 }
-Spotify::Spotify(const char* refresh_token, const char* redirect_uri, const char* client_id,const char* client_secret){
-  _retry = 0;
-  _refresh_token = refresh_token;
-  _redirect_uri = redirect_uri;
-  _client_id = client_id;
-  _client_secret = client_secret;
-  _debug_on = false;
-}
-Spotify::Spotify(const char* refresh_token, const char* redirect_uri, const char* client_id,const char* client_secret,bool debug_on){
-  _retry = 0;
-  _refresh_token = refresh_token;
-  _redirect_uri = redirect_uri;
-  _client_id = client_id;
-  _client_secret = client_secret;
-  _debug_on = debug_on;
-}
+
+
 Spotify::Spotify(const char* refresh_token, const char* redirect_uri, const char* client_id,const char* client_secret, bool debug_on, int max_num_retry){
   _retry = 0;
   _refresh_token = refresh_token;
@@ -257,7 +243,7 @@ bool Spotify::get_token(){
   }
   if ((http_code >=200)&&(http_code<=299)) {
     String response = http.getString();
-    DynamicJsonDocument doc(1024);
+    StaticJsonDocument<500> doc;
     deserializeJson(doc, response);
     _access_token = doc["access_token"].as<String>();
     reply = true;
@@ -272,8 +258,7 @@ void Spotify::init_response(response* response_obj){
   response_obj -> status_code = -1;
   response_obj -> reply ="If you see this something went wrong";
 }
-char* Spotify::array_to_char(int size, char** array) {
-  char result[_max_char_size];
+char* Spotify::array_to_char(int size, char** array, char* result) {
   result[0] = '\0';
   for (int i = 0; i < size; ++i) {
     strcat(result, array[i]);
@@ -292,6 +277,658 @@ void Spotify::array_to_json_array(int size,char** array, char* data, int data_si
   }
 
   serializeJson(json_array,data,data_size);
+}
+
+const char* Spotify::extract_endpoint(const char* url){
+  std::regex pattern(R"(https://api\.spotify\.com/v1/([^?]+))");
+
+    std::cmatch match;
+    if (std::regex_search(url, match, pattern)) {
+        return match[1].str().c_str();
+    }
+
+    return nullptr;
+}
+//API functions
+//Player
+#ifdef ENABLE_PLAYER
+response Spotify::currently_playing(){
+  char url[] = "https://api.spotify.com/v1/me/player/currently-playing";
+  return RestApiGet(url);
+}
+response Spotify::current_playback_state(){
+  char url[] = "https://api.spotify.com/v1/me/player";
+  return RestApiGet(url);
+}
+response Spotify::start_resume_playback(char* context_uri, int offset, int position_ms, char* device_id){
+  char url[] = "https://api.spotify.com/v1/me/player/play";
+  if(device_id != nullptr){
+    sprintf(url, "https://api.spotify.com/v1/me/player/play?device_id=%s", device_id);
+  }
+  char payload[_max_char_size]; 
+  int payload_size = 0;
+  if(context_uri != nullptr){
+    if (strncmp(context_uri, "spotify:track:", 14) == 0) {
+      sprintf(payload, "{\"uris\":[\"%s\"]}", context_uri);
+      
+    } else {
+      sprintf(payload, "{\"context_uri\":\"%s\",\"offset\":{\"position\":%d},\"position_ms\":%d}",context_uri, offset, position_ms);
+    }
+    payload_size = strlen(payload);
+  }
+  else{
+    payload_size = 0;
+    payload[0] = '\0';
+  }
+
+  return RestApiPut(url, payload_size, payload);
+}
+response Spotify::start_resume_playback(int size, char** uris, char* device_id){
+  char url[] = "https://api.spotify.com/v1/me/player/play";
+  if(device_id != nullptr){
+    sprintf(url, "https://api.spotify.com/v1/me/player/play?device_id=%s", device_id);
+  }
+  char payload[_max_char_size]; 
+  int payload_size = 0;
+  char arr[_max_char_size];
+  array_to_json_array(size, uris, arr);
+  sprintf(payload, "{\"uris\":%s}", arr);
+  payload_size = strlen(payload);
+
+  return RestApiPut(url, payload_size, payload);
+}
+response Spotify::start_resume_playback(char* device_id){
+  char url[100];
+  if(device_id != nullptr){
+    sprintf(url, "https://api.spotify.com/v1/me/player/play?device_id=%s", device_id);
+  }
+  else{
+    sprintf(url, "https://api.spotify.com/v1/me/player/play");
+  }
+  
+  return RestApiPut(url);
+}
+response Spotify::pause_playback(){
+  char url[] = "https://api.spotify.com/v1/me/player/pause";
+
+  return RestApiPut(url);
+}
+response Spotify::skip(){
+  char url[] = "https://api.spotify.com/v1/me/player/next";
+
+  return RestApiPost(url); 
+}
+response Spotify::previous(){
+  char url[] = "https://api.spotify.com/v1/me/player/previous";
+  
+  return RestApiPost(url);
+}
+response Spotify::available_devices(){
+  char url[] = "https://api.spotify.com/v1/me/player/devices";
+
+  return RestApiGet(url);
+}
+response Spotify::recently_played_tracks(int limit){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/player/recently-played?limit=%d", limit);
+
+  return RestApiGet(url);
+}
+response Spotify::get_queue(){
+  char url[] = "https://api.spotify.com/v1/me/player/queue";
+ 
+  return RestApiGet(url);
+}
+response Spotify::transfer_playback(char* device_id){
+  char url[] = "https://api.spotify.com/v1/me/player";
+  char payload[100];
+  int payload_size = 0;
+  sprintf(payload, "{\"device_ids\":[\"%s\"]}", device_id);
+  payload_size = strlen(payload);
+  return RestApiPut(url,payload_size, payload);
+}
+response Spotify::seek_to_position(int time_ms){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/player/seek?position_ms=%d", time_ms);
+
+  return RestApiPut(url);
+}
+response Spotify::repeat_mode(char* mode){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/player/repeat?state=%s", mode);
+
+  return RestApiPut(url);
+}
+response Spotify::set_volume(int value){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/player/volume?volume_percent=%d", value);
+
+  return RestApiPut(url);
+}
+response Spotify::shuffle(bool mode){
+  char state[6]; 
+  sprintf(state, "%s", mode ? "true" : "false");
+
+  char url[100]; 
+  sprintf(url, "https://api.spotify.com/v1/me/player/shuffle?state=%s", state);
+
+  return RestApiPut(url);
+}
+response Spotify::add_to_queue(char* context_uri){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/player/queue?uri=%s", context_uri);
+
+  return RestApiPost(url);
+}
+#endif
+#ifdef ENABLE_ALBUM
+//Albums
+response Spotify::get_album(char* album_id){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/albums/%s", album_id);
+  
+  return RestApiGet(url);
+}
+response Spotify::get_albums(int size, char ** album_ids){
+  char url[_max_char_size];
+  char arr[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/albums?ids=%s", array_to_char(size, album_ids,arr));
+  
+  return RestApiGet(url);
+}
+response Spotify::get_album_tracks(char* album_id, int limit, int offset){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/albums/%s/tracks?limit=%d&offset=%d", album_id, limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::get_users_saved_albums(int limit, int offset){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/albums?limit=%d&offset=%d", limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::save_albums_for_current_user(int size, char ** album_ids){
+  char url[] = "https://api.spotify.com/v1/me/albums";
+  char payload[_max_char_size];
+  int payload_size = 0;
+  array_to_json_array(size, album_ids, payload);
+  payload_size = strlen(payload);
+
+  return RestApiPut(url, payload_size, payload);
+}
+response Spotify::remove_users_saved_albums(int size,char ** album_ids){
+  char url[] = "https://api.spotify.com/v1/me/albums";
+  char payload[_max_char_size];
+  array_to_json_array(size, album_ids, payload);
+
+  return RestApiDelete(url, payload);
+}
+response Spotify::check_useres_saved_albums(int size,char ** album_ids){
+  char url[_max_char_size];
+  char arr[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/me/albums/contains?ids=%s", array_to_char(size, album_ids, arr));
+
+  return RestApiGet(url);
+}
+response Spotify::get_new_releases(int limit, int offset, char* country){
+  char url[120];
+  if(country == nullptr){
+    sprintf(url, "https://api.spotify.com/v1/browse/new-releases?limit=%d&offset=%d", limit, offset);
+  }
+  else{
+    sprintf(url, "https://api.spotify.com/v1/browse/new-releases?country=%s&limit=%d&offset=%d", country, limit, offset);
+  }
+
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_ARTIST
+//Artists
+response Spotify::get_artist(char* artist_id){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/artists/%s", artist_id);
+
+  return RestApiGet(url);
+}
+response Spotify::get_several_artists(int size, char ** artist_ids){
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/artists?ids=%s", array_to_char(size, artist_ids));
+
+  return RestApiGet(url);
+}
+response Spotify::get_artist_albums(char* artist_id,int size_groups, char** include_groups, int limit, int offset){
+  char url[200];
+  sprintf(url, "https://api.spotify.com/v1/artists/%s/albums?include_groups=%s&limit=%d&offset=%d", artist_id, array_to_char(size_groups,include_groups), limit, offset);  
+
+  return RestApiGet(url);
+}
+response Spotify::get_artist_top_tracks(char* artist_id, char* country){
+  char url[100];
+  if(country == nullptr){
+    sprintf(url, "https://api.spotify.com/v1/artists/%s/top-tracks", artist_id);
+  }
+  else{
+    sprintf(url, "https://api.spotify.com/v1/artists/%s/top-tracks?country=%s", artist_id, country);
+  }
+
+  return RestApiGet(url);
+}
+response Spotify::get_artist_related_artist(char* artist_id){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/artists/%s/related-artists", artist_id);
+
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_AUDIOBOOKS
+//Audiobooks
+response Spotify::get_audiobook(char* audiobook_id){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/audiobooks/%s", audiobook_id);
+
+  return RestApiGet(url);
+}
+response Spotify::get_several_audiobooks(int size, char** audiobook_ids){
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/audiobooks?ids=%s", array_to_char(size, audiobook_ids));
+
+  return RestApiGet(url);
+}
+response Spotify::get_audiobook_chapters(char* audiobook_id, int limit, int offset){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/audiobooks/%s/chapters?limit=%d&offset=%d", audiobook_id, limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::get_users_audiobooks(int limit, int offset){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/audiobooks?limit=%d&offset=%d", limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::save_audiobooks_for_current_user(int size, char** audiobook_ids){
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/me/audiobooks?ids=%s", array_to_char(size, audiobook_ids));
+
+  return RestApiPut(url);
+}
+response Spotify::remove_audiobooks_for_current_user(int size, char** audiobook_ids){
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/me/audiobooks?ids=%s", array_to_char(size, audiobook_ids));
+
+  return RestApiDelete(url);
+}
+response Spotify::check_users_saved_audiobooks(int size, char** audiobook_ids){
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/me/audiobooks/contains?ids=%s", array_to_char(size, audiobook_ids));
+
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_CATEGORIES
+//Categories
+response Spotify::get_several_browse_categories(char* country, char* locale, int limit, int offset){
+  char url[200];
+  sprintf(url, "https://api.spotify.com/v1/browse/categories?country=%s&locale=%s&limit=%d&offset=%d", country, locale, limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::get_single_browse_category(char* category_id, char* country, char* locale){
+  char url[150];
+  sprintf(url, "https://api.spotify.com/v1/browse/categories/%s?country=%s&locale=%s", category_id, country, locale);
+
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_CHAPTERS
+//Chapters
+response Spotify::get_chapter(char* chapter_id){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/chapters/%s", chapter_id);
+
+  return RestApiGet(url);
+}
+response Spotify::get_several_chapters(int size, char** chapter_ids){
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/chapters?ids=%s", array_to_char(size, chapter_ids));
+
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_EPISODES
+//Episodes
+response Spotify::get_episode(char* episode_id){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/episodes/%s", episode_id);
+
+  return RestApiGet(url);
+}
+response Spotify::get_several_episodes(int size,char** episode_ids){
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/episodes?ids=%s", array_to_char(size, episode_ids));
+
+  return RestApiGet(url);
+}
+response Spotify::get_users_saved_episodes(int limit, int offset){
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/episodes?limit=%d&offset=%d", limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::save_episodes_for_current_user(int size,char** episode_ids){
+  char url[] = "https://api.spotify.com/v1/me/episodes";
+  char payload[_max_char_size];
+  int payload_size = 0;
+  array_to_json_array(size, episode_ids, payload);
+  payload_size = strlen(payload);
+
+  return RestApiPut(url, payload_size, payload);
+}
+response Spotify::remove_episodes_for_current_user(int size,char** episode_ids){
+  char url[] = "https://api.spotify.com/v1/me/episodes";
+  char payload[_max_char_size];
+  array_to_json_array(size, episode_ids, payload);
+
+  return RestApiDelete(url, payload);
+}
+response Spotify::check_users_saved_episodes(int size,char** episode_ids){
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/me/episodes/contains?ids=%s", array_to_char(size, episode_ids));
+
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_GENRES
+//Genres
+response Spotify::get_available_genre_seeds(){
+  char url[] = "https://api.spotify.com/v1/recommendations/available-genre-seeds";
+
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_MARKETS
+//Markets
+response Spotify::get_available_markets(){
+  char url[] = "https://api.spotify.com/v1/markets";
+  
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_PLAYLISTS
+//Playlist
+response Spotify::get_playlist(char* playlist_id, char* fields) {
+  char url[200];
+  sprintf(url, "https://api.spotify.com/v1/playlists/%s?fields=%s", playlist_id, fields);
+
+  return RestApiGet(url);
+}
+response Spotify::change_playlist_details(char* playlist_id, char* name, bool is_public, bool is_collaborative, char* description) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/playlists/%s", playlist_id);
+
+  DynamicJsonDocument doc(400);
+  if (is_public && is_collaborative){
+    is_collaborative = false;
+  }
+  doc["collaborative"] = is_collaborative;
+  doc["name"] = name;
+  doc["public"] = is_public;
+  doc["description"] = description;
+
+  char payload[200];
+  int payload_size = 0;
+  serializeJson(doc, payload);
+  payload_size = strlen(payload);
+
+  return RestApiPut(url, payload_size, payload);
+}
+response Spotify::get_playlist_items(char* playlist_id, char* fields, int limit, int offset) {
+  char url[200];
+  sprintf(url, "https://api.spotify.com/v1/playlists/%s/tracks?fields=%s&limit=%d&offset=%d", playlist_id, fields, limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::update_playlist_items(char* playlist_id,int size, char** uris, int range_length, int range_start, int insert_before) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/playlists/%s/tracks", playlist_id);
+  
+  DynamicJsonDocument doc(_max_char_size);
+  char arr[_max_char_size];
+  array_to_json_array(size, uris, arr);
+  doc["uris"] = arr;
+  doc["range_start"] = range_start;
+  doc["insert_before"] = insert_before;
+  doc["range_length"] = range_length;
+
+  char payload[_max_char_size];
+  int payload_size = 0;
+  serializeJson(doc, payload);
+  payload_size = strlen(payload);
+
+  return RestApiPut(url, payload_size, payload);
+}
+response Spotify::add_items_to_playlist(char* playlist_id, int size, char ** uris, int position) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/playlists/%s/tracks", playlist_id);
+  
+  DynamicJsonDocument doc(1000);
+  char arr[_max_char_size];
+  array_to_json_array(size, uris, arr);
+  doc["uris"] = arr;
+  doc["position"] = position;
+
+  char payload[_max_char_size];
+  int payload_size = 0;
+  serializeJson(doc, payload);
+  payload_size = strlen(payload);
+
+  return RestApiPost(url, payload_size, payload);
+}
+response Spotify::remove_playlist_items(char* playlist_id,int size, char** uris) { 
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/playlists/%s/tracks", playlist_id);
+
+  char* payload = array_to_char(size, uris);
+  
+  
+  return RestApiDelete(url, payload);
+}
+response Spotify::get_current_users_playlists(int limit, int offset) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/playlists?limit=%d&offset=%d", limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::get_user_playlists(char* user_id, int limit, int offset) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/users/%s/playlists?limit=%d&offset=%d", user_id, limit, offset);
+  
+  return RestApiGet(url);
+}
+response Spotify::create_playlist(char* user_id, char* name, bool is_public, bool is_collaborative, char* description) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/users/%s/playlists", user_id);
+
+  if (is_public && is_collaborative){
+    is_collaborative = false;
+  }
+
+  DynamicJsonDocument doc(256); 
+  doc["name"] = name;
+  doc["public"] = is_public;
+  doc["collaborative"] = is_collaborative;
+  doc["description"] = description;
+  char payload[256];
+  int  payload_size = 0;
+  serializeJson(doc, payload);
+  payload_size = strlen(payload);
+
+  return RestApiPost(url, payload_size, payload);
+}
+response Spotify::get_featured_playlists(char* country, char* locale, char* timestamp, int limit, int offset) {
+  char url[200];
+  sprintf(url, "https://api.spotify.com/v1/browse/featured-playlists?country=%s&locale=%s&timestamp=%s&limit=%d&offset=%d", country, locale, timestamp, limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::get_category_playlists(char* category_id, char* country, int limit, int offset) {
+  char url[200];
+  sprintf(url, "https://api.spotify.com/v1/browse/categories/%s/playlists?country=%s&limit=%d&offset=%d", category_id, country, limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::get_playlist_cover_image(char* playlist_id) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/playlists/%s/images", playlist_id);
+
+  return RestApiGet(url);
+}
+response Spotify::add_custom_playlist_cover_image(char* playlist_id, char* data) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/playlists/%s/images", playlist_id);  
+  int payload_size = strlen(data);
+
+  return RestApiPut(url, payload_size, data);
+}
+#endif
+#ifdef ENABLE_SEARCH
+//Search
+response Spotify::search(char* q, char* type, int limit, int offset){
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/search?q=%s&type=%s&limit=%d&offset=%d", q, type, limit, offset);
+
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_SHOWS
+//Shows
+response Spotify::get_show(char* show_id) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/shows/%s", show_id);
+
+  return RestApiGet(url);
+}
+response Spotify::get_several_shows(int size,char ** show_ids) {
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/shows?ids=%s", array_to_char(size, show_ids));
+
+  return RestApiGet(url);
+}
+response Spotify::get_show_episodes(char* show_id, int limit, int offset) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/shows/%s/episodes?limit=%d&offset=%d", show_id, limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::get_users_saved_shows(int limit, int offset) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/shows?limit=%d&offset=%d", limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::save_shows_for_current_user(int size,char ** show_ids) {
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/me/shows?ids=%s", array_to_char(size, show_ids));
+
+  return RestApiPut(url);
+}
+response Spotify::remove_shows_for_current_user(int size,char ** show_ids) {
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/me/shows?ids=%s", array_to_char(size, show_ids));
+
+  return RestApiDelete(url);
+}
+response Spotify::check_users_saved_shows(int size,char ** show_ids) {
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/me/shows/contains?ids=%s", array_to_char(size, show_ids));
+
+  return RestApiGet(url);
+}
+#endif
+#ifdef ENABLE_TRACKS
+//Tracks
+response Spotify::get_track(char* track_id) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/tracks/%s", track_id);
+
+  return RestApiGet(url);
+}
+response Spotify::get_several_tracks(int size,char ** track_ids) {
+  char url[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/tracks?ids=%s", array_to_char(size, track_ids));
+
+  return RestApiGet(url);
+}
+response Spotify::get_user_saved_tracks(int limit, int offset) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/me/tracks?limit=%d&offset=%d", limit, offset);
+
+  return RestApiGet(url);
+}
+response Spotify::save_tracks_for_current_user(int size,char ** track_ids) {
+  char url[] = "https://api.spotify.com/v1/me/tracks";
+  char payload[_max_char_size];
+  int payload_size = 0;
+  array_to_json_array(size, track_ids, payload);
+  payload_size = strlen(payload);
+
+  return RestApiPut(url, payload_size, payload);
+}
+response Spotify::remove_user_saved_tracks(int size,char ** track_ids) {
+  char url[] = "https://api.spotify.com/v1/me/tracks";
+  char payload[_max_char_size];
+  array_to_json_array(size, track_ids, payload);
+
+  return RestApiDelete(url, payload);
+}
+response Spotify::check_user_saved_tracks(int size,char ** track_ids) {
+  char url[_max_char_size];
+  char arr[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/me/tracks/contains?ids=%s", array_to_char(size, track_ids, arr));
+
+  return RestApiGet(url);
+}
+response Spotify::get_tracks_audio_features(int size,char ** track_ids) {
+  char url[_max_char_size];
+  char arr[_max_char_size];
+  sprintf(url, "https://api.spotify.com/v1/audio-features?ids=%s", array_to_char(size, track_ids, arr));
+
+  return RestApiGet(url);
+}
+response Spotify::get_track_audio_features(char* track_id) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/audio-features/%s", track_id);
+
+  return RestApiGet(url);
+}
+response Spotify::get_track_audio_analysis(char* track_id) {
+  char url[100];
+  sprintf(url, "https://api.spotify.com/v1/audio-analysis/%s", track_id);
+
+  return RestApiGet(url);
+}
+response Spotify::get_recommendations(recommendations& recom, int limit){
+  char url[2000];
+  sprintf(url, "https://api.spotify.com/v1/recommendations?limit=%d", limit);
+
+  std::map<char*, char*> char_params;
+  std::map<char*, float> float_params;
+  populate_float_values(float_params, recom);
+  populate_char_values(char_params, recom); 
+
+  for (const auto& param : char_params) {
+    char value[100];
+    sprintf(value, "&%s%s",param.first, param.second);
+    strcat(url, value);
+  }
+  for(const auto& param : float_params){
+    char value[100];
+    sprintf(value, "&%s=%f",param.first, param.second);
+    strcat(url, value);
+  }
+
+  return RestApiGet(url);
 }
 bool Spotify::is_valid_value(float param) {
   return param >= 0.0 && param <= 1.0;
@@ -441,642 +1078,19 @@ void Spotify::populate_float_values(std::map<char*, float>& float_params, recomm
   }
 }
 void Spotify::populate_char_values(std::map<char*, char*>& char_params, recommendations& recom){
+  char arr[_max_char_size];
   if(is_valid_value(recom.seed_artists_size)){
-    char_params["seed_artists"] = array_to_char(recom.seed_artists_size, recom.seed_artists);
+    char_params["seed_artists"] = array_to_char(recom.seed_artists_size, recom.seed_artists, arr);
   }
   if(is_valid_value(recom.seed_genres_size)){
-    char_params["seed_genres"] = array_to_char(recom.seed_genres_size, recom.seed_genres);
+    char_params["seed_genres"] = array_to_char(recom.seed_genres_size, recom.seed_genres, arr);
   }
   if(is_valid_value(recom.seed_tracks_size)){
-    char_params["seed_tracks"] = array_to_char(recom.seed_tracks_size, recom.seed_tracks);
+    char_params["seed_tracks"] = array_to_char(recom.seed_tracks_size, recom.seed_tracks,arr);
   }
 }
-const char* Spotify::extract_endpoint(char* url){
-  std::regex pattern(R"(https://api\.spotify\.com/v1/([^/?]+))");
-
-    std::cmatch match;
-    if (std::regex_search(url, match, pattern)) {
-        return match[1].str().c_str();
-    }
-
-    return nullptr;
-}
-//API functions
-//Player
-response Spotify::currently_playing(){
-  char url[] = "https://api.spotify.com/v1/me/player/currently-playing";
-  return RestApiGet(url);
-}
-response Spotify::current_playback_state(){
-  char url[] = "https://api.spotify.com/v1/me/player";
-  return RestApiGet(url);
-}
-response Spotify::start_resume_playback(char* context_uri, int offset, int position_ms, char* device_id){
-  char url[] = "https://api.spotify.com/v1/me/player/play";
-  if(device_id != nullptr){
-    sprintf(url, "https://api.spotify.com/v1/me/player/play?device_id=%s", device_id);
-  }
-  char payload[_max_char_size]; 
-  int payload_size = 0;
-  if(context_uri != nullptr){
-    if (strncmp(context_uri, "spotify:track:", 14) == 0) {
-      sprintf(payload, "{\"uris\":[\"%s\"]}", context_uri);
-      
-    } else {
-      sprintf(payload, "{\"context_uri\":\"%s\",\"offset\":{\"position\":%d},\"position_ms\":%d}",context_uri, offset, position_ms);
-    }
-    payload_size = strlen(payload);
-  }
-  else{
-    payload_size = 0;
-    payload[0] = '\0';
-  }
-
-  return RestApiPut(url, payload_size, payload);
-}
-response Spotify::start_resume_playback(int size, char** uris, char* device_id){
-  char url[] = "https://api.spotify.com/v1/me/player/play";
-  if(device_id != nullptr){
-    sprintf(url, "https://api.spotify.com/v1/me/player/play?device_id=%s", device_id);
-  }
-  char payload[_max_char_size]; 
-  int payload_size = 0;
-  char arr[_max_char_size];
-  array_to_json_array(size, uris, arr);
-  sprintf(payload, "{\"uris\":%s}", arr);
-  payload_size = strlen(payload);
-
-  return RestApiPut(url, payload_size, payload);
-}
-response Spotify::start_resume_playback(char* device_id){
-  char url[100];
-  if(device_id != nullptr){
-    sprintf(url, "https://api.spotify.com/v1/me/player/play?device_id=%s", device_id);
-  }
-  else{
-    sprintf(url, "https://api.spotify.com/v1/me/player/play");
-  }
-  
-  return RestApiPut(url);
-}
-response Spotify::pause_playback(){
-  char url[] = "https://api.spotify.com/v1/me/player/pause";
-
-  return RestApiPut(url);
-}
-response Spotify::skip(){
-  char url[] = "https://api.spotify.com/v1/me/player/next";
-
-  return RestApiPost(url); 
-}
-response Spotify::previous(){
-  char url[] = "https://api.spotify.com/v1/me/player/previous";
-  
-  return RestApiPost(url);
-}
-response Spotify::available_devices(){
-  char url[] = "https://api.spotify.com/v1/me/player/devices";
-
-  return RestApiGet(url);
-}
-response Spotify::recently_played_tracks(int limit){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/player/recently-played?limit=%d", limit);
-
-  return RestApiGet(url);
-}
-response Spotify::get_queue(){
-  char url[] = "https://api.spotify.com/v1/me/player/queue";
- 
-  return RestApiGet(url);
-}
-response Spotify::transfer_playback(char* device_id){
-  char url[] = "https://api.spotify.com/v1/me/player";
-  char payload[100];
-  int payload_size = 0;
-  sprintf(payload, "{\"device_ids\":[\"%s\"]}", device_id);
-  payload_size = strlen(payload);
-  return RestApiPut(url,payload_size, payload);
-}
-response Spotify::seek_to_position(int time_ms){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/player/seek?position_ms=%d", time_ms);
-
-  return RestApiPut(url);
-}
-response Spotify::repeat_mode(char* mode){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/player/repeat?state=%s", mode);
-
-  return RestApiPut(url);
-}
-response Spotify::set_volume(int value){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/player/volume?volume_percent=%d", value);
-
-  return RestApiPut(url);
-}
-response Spotify::shuffle(bool mode){
-  char state[6]; 
-  sprintf(state, "%s", mode ? "true" : "false");
-
-  char url[100]; 
-  sprintf(url, "https://api.spotify.com/v1/me/player/shuffle?state=%s", state);
-
-  return RestApiPut(url);
-}
-response Spotify::add_to_queue(char* context_uri){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/player/queue?uri=%s", context_uri);
-
-  return RestApiPost(url);
-}
-
-//Albums
-response Spotify::get_album(char* album_id){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/albums/%s", album_id);
-  
-  return RestApiGet(url);
-}
-response Spotify::get_albums(int size, char ** album_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/albums?ids=%s", array_to_char(size, album_ids));
-  Serial.println(url);
-
-  return RestApiGet(url);
-}
-response Spotify::get_album_tracks(char* album_id, int limit, int offset){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/albums/%s/tracks?limit=%d&offset=%d", album_id, limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::get_users_saved_albums(int limit, int offset){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/albums?limit=%d&offset=%d", limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::save_albums_for_current_user(int size, char ** album_ids){
-  char url[] = "https://api.spotify.com/v1/me/albums";
-  char payload[_max_char_size];
-  int payload_size = 0;
-  array_to_json_array(size, album_ids, payload);
-  payload_size = strlen(payload);
-
-  return RestApiPut(url, payload_size, payload);
-}
-response Spotify::remove_users_saved_albums(int size,char ** album_ids){
-  char url[] = "https://api.spotify.com/v1/me/albums";
-  char payload[_max_char_size];
-  array_to_json_array(size, album_ids, payload);
-
-  return RestApiDelete(url, payload);
-}
-response Spotify::check_useres_saved_albums(int size,char ** album_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/me/albums/contains?ids=%s", array_to_char(size, album_ids));
-
-  return RestApiGet(url);
-}
-response Spotify::get_new_releases(char* country, int limit, int offset){
-  char url[120];
-  sprintf(url, "https://api.spotify.com/v1/browse/new-releases?country=%s&limit=%d&offset=%d", country, limit, offset);
-
-  return RestApiGet(url);
-}
-
-//Artists
-response Spotify::get_artist(char* artist_id){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/artists/%s", artist_id);
-
-  return RestApiGet(url);
-}
-response Spotify::get_several_artists(int size, char ** artist_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/artists?ids=%s", array_to_char(size, artist_ids));
-
-  return RestApiGet(url);
-}
-response Spotify::get_artist_albums(char* artist_id,int size_groups, char** include_groups, int limit, int offset){
-  char url[200];
-  sprintf(url, "https://api.spotify.com/v1/artists/%s/albums?include_groups=%s&limit=%d&offset=%d", artist_id, array_to_char(size_groups,include_groups), limit, offset);  
-
-  return RestApiGet(url);
-}
-response Spotify::get_artist_top_tracks(char* artist_id, char* country){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/artists/%s/top-tracks?country=%s", artist_id, country);
-
-  return RestApiGet(url);
-}
-response Spotify::get_artist_related_artist(char* artist_id){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/artists/%s/related-artists", artist_id);
-
-  return RestApiGet(url);
-}
-
-//Audiobooks
-response Spotify::get_audiobook(char* audiobook_id){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/audiobooks/%s", audiobook_id);
-
-  return RestApiGet(url);
-}
-response Spotify::get_several_audiobooks(int size, char** audiobook_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/audiobooks?ids=%s", array_to_char(size, audiobook_ids));
-
-  return RestApiGet(url);
-}
-response Spotify::get_audiobook_chapters(char* audiobook_id, int limit, int offset){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/audiobooks/%s/chapters?limit=%d&offset=%d", audiobook_id, limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::get_users_audiobooks(int limit, int offset){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/audiobooks?limit=%d&offset=%d", limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::save_audiobooks_for_current_user(int size, char** audiobook_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/me/audiobooks?ids=%s", array_to_char(size, audiobook_ids));
-
-  return RestApiPut(url);
-}
-response Spotify::remove_audiobooks_for_current_user(int size, char** audiobook_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/me/audiobooks?ids=%s", array_to_char(size, audiobook_ids));
-
-  return RestApiDelete(url);
-}
-response Spotify::check_users_saved_audiobooks(int size, char** audiobook_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/me/audiobooks/contains?ids=%s", array_to_char(size, audiobook_ids));
-
-  return RestApiGet(url);
-}
-
-//Categories
-response Spotify::get_several_browse_categories(char* country, char* locale, int limit, int offset){
-  char url[200];
-  sprintf(url, "https://api.spotify.com/v1/browse/categories?country=%s&locale=%s&limit=%d&offset=%d", country, locale, limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::get_single_browse_category(char* category_id, char* country, char* locale){
-  char url[150];
-  sprintf(url, "https://api.spotify.com/v1/browse/categories/%s?country=%s&locale=%s", category_id, country, locale);
-
-  return RestApiGet(url);
-}
-
-//Chapters
-response Spotify::get_chapter(char* chapter_id){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/chapters/%s", chapter_id);
-
-  return RestApiGet(url);
-}
-response Spotify::get_several_chapters(int size, char** chapter_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/chapters?ids=%s", array_to_char(size, chapter_ids));
-
-  return RestApiGet(url);
-}
-
-//Episodes
-response Spotify::get_episode(char* episode_id){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/episodes/%s", episode_id);
-
-  return RestApiGet(url);
-}
-response Spotify::get_several_episodes(int size,char** episode_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/episodes?ids=%s", array_to_char(size, episode_ids));
-
-  return RestApiGet(url);
-}
-response Spotify::get_users_saved_episodes(int limit, int offset){
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/episodes?limit=%d&offset=%d", limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::save_episodes_for_current_user(int size,char** episode_ids){
-  char url[] = "https://api.spotify.com/v1/me/episodes";
-  char payload[_max_char_size];
-  int payload_size = 0;
-  array_to_json_array(size, episode_ids, payload);
-  payload_size = strlen(payload);
-
-  return RestApiPut(url, payload_size, payload);
-}
-response Spotify::remove_episodes_for_current_user(int size,char** episode_ids){
-  char url[] = "https://api.spotify.com/v1/me/episodes";
-  char payload[_max_char_size];
-  array_to_json_array(size, episode_ids, payload);
-
-  return RestApiDelete(url, payload);
-}
-response Spotify::check_users_saved_episodes(int size,char** episode_ids){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/me/episodes/contains?ids=%s", array_to_char(size, episode_ids));
-
-  return RestApiGet(url);
-}
-
-//Genres
-response Spotify::get_available_genre_seeds(){
-  char url[] = "https://api.spotify.com/v1/recommendations/available-genre-seeds";
-
-  return RestApiGet(url);
-}
-
-//Markets
-response Spotify::get_available_markets(){
-  char url[] = "https://api.spotify.com/v1/markets";
-  
-  return RestApiGet(url);
-}
-
-//Playlist
-response Spotify::get_playlist(char* playlist_id, char* fields) {
-  char url[200];
-  sprintf(url, "https://api.spotify.com/v1/playlists/%s?fields=%s", playlist_id, fields);
-
-  return RestApiGet(url);
-}
-response Spotify::change_playlist_details(char* playlist_id, char* name, bool is_public, bool is_collaborative, char* description) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/playlists/%s", playlist_id);
-
-  DynamicJsonDocument doc(400);
-  if (is_public && is_collaborative){
-    is_collaborative = false;
-  }
-  doc["collaborative"] = is_collaborative;
-  doc["name"] = name;
-  doc["public"] = is_public;
-  doc["description"] = description;
-
-  char payload[200];
-  int payload_size = 0;
-  serializeJson(doc, payload);
-  payload_size = strlen(payload);
-
-  return RestApiPut(url, payload_size, payload);
-}
-response Spotify::get_playlist_items(char* playlist_id, char* fields, int limit, int offset) {
-  char url[200];
-  sprintf(url, "https://api.spotify.com/v1/playlists/%s/tracks?fields=%s&limit=%d&offset=%d", playlist_id, fields, limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::update_playlist_items(char* playlist_id,int size, char** uris, int range_length, int range_start, int insert_before) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/playlists/%s/tracks", playlist_id);
-  
-  DynamicJsonDocument doc(_max_char_size);
-  char arr[_max_char_size];
-  array_to_json_array(size, uris, arr);
-  doc["uris"] = arr;
-  doc["range_start"] = range_start;
-  doc["insert_before"] = insert_before;
-  doc["range_length"] = range_length;
-
-  char payload[_max_char_size];
-  int payload_size = 0;
-  serializeJson(doc, payload);
-  payload_size = strlen(payload);
-
-  return RestApiPut(url, payload_size, payload);
-}
-response Spotify::add_items_to_playlist(char* playlist_id, int size, char ** uris, int position) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/playlists/%s/tracks", playlist_id);
-  
-  DynamicJsonDocument doc(1000);
-  char arr[_max_char_size];
-  array_to_json_array(size, uris, arr);
-  doc["uris"] = arr;
-  doc["position"] = position;
-
-  char payload[_max_char_size];
-  int payload_size = 0;
-  serializeJson(doc, payload);
-  payload_size = strlen(payload);
-
-  return RestApiPost(url, payload_size, payload);
-}
-response Spotify::remove_playlist_items(char* playlist_id,int size, char** uris) { 
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/playlists/%s/tracks", playlist_id);
-
-  char* payload = array_to_char(size, uris);
-  
-  
-  return RestApiDelete(url, payload);
-}
-response Spotify::get_current_users_playlists(int limit, int offset) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/playlists?limit=%d&offset=%d", limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::get_user_playlists(char* user_id, int limit, int offset) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/users/%s/playlists?limit=%d&offset=%d", user_id, limit, offset);
-  
-  return RestApiGet(url);
-}
-response Spotify::create_playlist(char* user_id, char* name, bool is_public, bool is_collaborative, char* description) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/users/%s/playlists", user_id);
-
-  if (is_public && is_collaborative){
-    is_collaborative = false;
-  }
-
-  DynamicJsonDocument doc(256); 
-  doc["name"] = name;
-  doc["public"] = is_public;
-  doc["collaborative"] = is_collaborative;
-  doc["description"] = description;
-  char payload[256];
-  int  payload_size = 0;
-  serializeJson(doc, payload);
-  payload_size = strlen(payload);
-
-  return RestApiPost(url, payload_size, payload);
-}
-response Spotify::get_featured_playlists(char* country, char* locale, char* timestamp, int limit, int offset) {
-  char url[200];
-  sprintf(url, "https://api.spotify.com/v1/browse/featured-playlists?country=%s&locale=%s&timestamp=%s&limit=%d&offset=%d", country, locale, timestamp, limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::get_category_playlists(char* category_id, char* country, int limit, int offset) {
-  char url[200];
-  sprintf(url, "https://api.spotify.com/v1/browse/categories/%s/playlists?country=%s&limit=%d&offset=%d", category_id, country, limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::get_playlist_cover_image(char* playlist_id) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/playlists/%s/images", playlist_id);
-
-  return RestApiGet(url);
-}
-response Spotify::add_custom_playlist_cover_image(char* playlist_id, char* data) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/playlists/%s/images", playlist_id);  
-  int payload_size = strlen(data);
-
-  return RestApiPut(url, payload_size, data);
-}
-
-//Search
-response Spotify::search(char* q, char* type, int limit, int offset){
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/search?q=%s&type=%s&limit=%d&offset=%d", q, type, limit, offset);
-
-  return RestApiGet(url);
-}
-
-//Shows
-response Spotify::get_show(char* show_id) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/shows/%s", show_id);
-
-  return RestApiGet(url);
-}
-response Spotify::get_several_shows(int size,char ** show_ids) {
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/shows?ids=%s", array_to_char(size, show_ids));
-
-  return RestApiGet(url);
-}
-response Spotify::get_show_episodes(char* show_id, int limit, int offset) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/shows/%s/episodes?limit=%d&offset=%d", show_id, limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::get_users_saved_shows(int limit, int offset) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/shows?limit=%d&offset=%d", limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::save_shows_for_current_user(int size,char ** show_ids) {
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/me/shows?ids=%s", array_to_char(size, show_ids));
-
-  return RestApiPut(url);
-}
-response Spotify::remove_shows_for_current_user(int size,char ** show_ids) {
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/me/shows?ids=%s", array_to_char(size, show_ids));
-
-  return RestApiDelete(url);
-}
-response Spotify::check_users_saved_shows(int size,char ** show_ids) {
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/me/shows/contains?ids=%s", array_to_char(size, show_ids));
-
-  return RestApiGet(url);
-}
-
-//Tracks
-response Spotify::get_track(char* track_id) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/tracks/%s", track_id);
-
-  return RestApiGet(url);
-}
-response Spotify::get_several_tracks(int size,char ** track_ids) {
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/tracks?ids=%s", array_to_char(size, track_ids));
-
-  return RestApiGet(url);
-}
-response Spotify::get_user_saved_tracks(int limit, int offset) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/me/tracks?limit=%d&offset=%d", limit, offset);
-
-  return RestApiGet(url);
-}
-response Spotify::save_tracks_for_current_user(int size,char ** track_ids) {
-  char url[] = "https://api.spotify.com/v1/me/tracks";
-  char payload[_max_char_size];
-  int payload_size = 0;
-  array_to_json_array(size, track_ids, payload);
-  payload_size = strlen(payload);
-
-  return RestApiPut(url, payload_size, payload);
-}
-response Spotify::remove_user_saved_tracks(int size,char ** track_ids) {
-  char url[] = "https://api.spotify.com/v1/me/tracks";
-  char payload[_max_char_size];
-  array_to_json_array(size, track_ids, payload);
-
-  return RestApiDelete(url, payload);
-}
-response Spotify::check_user_saved_tracks(int size,char ** track_ids) {
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/me/tracks/contains?ids=%s", array_to_char(size, track_ids));
-
-  return RestApiGet(url);
-}
-response Spotify::get_tracks_audio_features(int size,char ** track_ids) {
-  char url[_max_char_size];
-  sprintf(url, "https://api.spotify.com/v1/audio-features?ids=%s", array_to_char(size, track_ids));
-
-  return RestApiGet(url);
-}
-response Spotify::get_track_audio_features(char* track_id) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/audio-features/%s", track_id);
-
-  return RestApiGet(url);
-}
-response Spotify::get_track_audio_analysis(char* track_id) {
-  char url[100];
-  sprintf(url, "https://api.spotify.com/v1/audio-analysis/%s", track_id);
-
-  return RestApiGet(url);
-}
-response Spotify::get_recommendations(recommendations& recom, int limit){
-  char url[2000];
-  sprintf(url, "https://api.spotify.com/v1/recommendations?limit=%d", limit);
-
-  std::map<char*, char*> char_params;
-  std::map<char*, float> float_params;
-  populate_float_values(float_params, recom);
-  populate_char_values(char_params, recom); 
-
-  for (const auto& param : char_params) {
-    char value[100];
-    sprintf(value, "&%s%s",param.first, param.second);
-    strcat(url, value);
-  }
-  for(const auto& param : float_params){
-    char value[100];
-    sprintf(value, "&%s=%f",param.first, param.second);
-    strcat(url, value);
-  }
-
-  return RestApiGet(url);
-}
-
+#endif
+#ifdef ENABLE_USER
 //Users
 response Spotify::get_current_user_profile() {
   char url[] = "https://api.spotify.com/v1/me";
@@ -1147,7 +1161,8 @@ response Spotify::check_if_users_follow_playlist(char* playlist_id,int size, cha
 
   return RestApiGet(url);
 }
-
+#endif
+#ifdef ENABLE_SIMPIFIED
 //Simplified functions, formatting functions
 String Spotify::current_track_name(){
   String track_name = "Something went wrong";
@@ -1224,6 +1239,41 @@ char* Spotify::current_device_id(char * device_id){
   }
   return device_id;
 }
+char* Spotify::current_track_name(char * track_name){
+  response data = currently_playing();
+  if((data.status_code>=200)&&(data.status_code<=299)){
+    DynamicJsonDocument doc(10000);
+    deserializeJson(doc,data.reply);
+    sprintf(track_name, "%s", doc["item"]["name"].as<String>().c_str());
+  }
+  return track_name;
+}
+char* Spotify::current_track_id(char * track_id){
+  response data = currently_playing();
+  if((data.status_code>=200)&&(data.status_code<=299)){
+    DynamicJsonDocument doc(10000);
+    deserializeJson(doc,data.reply);
+    sprintf(track_id, "%s", doc["item"]["id"].as<String>().c_str());
+  }
+  return track_id;
+}
+char* Spotify::current_artist_names(char * artist_names){
+  response data = currently_playing();
+  if((data.status_code>=200)&&(data.status_code<=299)){
+    DynamicJsonDocument doc(10000);
+    deserializeJson(doc,data.reply);
+    JsonArray array = doc["item"]["artists"];
+    int len = array.size();
+    artist_names[0] = '\0';
+    for (int i = 0; i<len; i++){
+      strcat(artist_names, array[i]["name"].as<String>().c_str());
+      if (i<len-1){
+        strcat(artist_names, ", ");
+      }
+    }
+  }
+  return artist_names;
+}
 bool Spotify::is_playing(){
   bool is_playing = true;
   response data = currently_playing();
@@ -1234,6 +1284,7 @@ bool Spotify::is_playing(){
   }
   return is_playing;
 }
+#endif
 char Spotify::convert_id_to_uri(char* id, char* type){
   char uri[45];
   sprintf(uri, "spotify:%s:%s", type, id);
@@ -1246,6 +1297,6 @@ char* Spotify::convert_id_to_uri(char* id, char* type,char * uri){
 void print_response(response response_obj){
   Serial.print("Status: ");
   Serial.println(response_obj.status_code);
-  Serial.print("Reply: ");
-  Serial.println(response_obj.reply);
-}
+  /*Serial.print("Reply: ");
+  Serial.println(response_obj.reply);*/
+} 

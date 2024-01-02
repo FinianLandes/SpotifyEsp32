@@ -1,7 +1,9 @@
 #include <WiFi.h>
+#include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <base64.h>
+#include <UrlEncode.h>
 #include "SpotifyESP32.h"
 
 /*const char* ssid = "Rebweg10D";
@@ -13,7 +15,7 @@ const char* client_secret = "9ca64f76f7b54ecdaf3ae78585ff8b0f";
 const char* redirect_uri = "http://localhost:8080";
 const char* refresh_token="AQAichrGMfjjDHYWIAENJYyWoi_KpzLZ93_HSS30J8zULeuHRPmF9-Wh3aSEd5ju8tloWGDZ9GJodjRH51PRUPvTqPg855b3fdmQ8JifmdNAEfSapfhkihTKKXveJxie00o";
 
-using namespace Spotify_types;
+//using namespace Spotify_types;
 
 Spotify sp(refresh_token, redirect_uri, client_id, client_secret, true);
 
@@ -52,20 +54,7 @@ char* artist_user_ids[] = {"2CIMQHirSU0MQqyYHq0eOx","57dN52uHvrHOxijzpIgu3E","1v
 void setup() {
   Serial.begin(115200);
   connectToWifi();
-  test_player();
   test_albums();
-  test_artist();
-  test_audiobooks();
-  test_chapters();
-  test_categories();
-  test_episodes();
-  test_genres();
-  test_markets();
-  test_playlist();
-  test_search();
-  test_shows();
-  test_tracks();
-  test_users();
 
   
 }
@@ -85,14 +74,15 @@ void connectToWifi(){
   Serial.println("Connected to WiFi");
 }
 //working
-void test_player(){
+/*void test_player(){
   Serial.print("Currently Playing: ");
   print_response(sp.currently_playing());
 
   char uri[SIZE_OF_URI];
   Serial.print("Play track: ");
   sp.convert_id_to_uri(song_id,TYPE_TRACK,uri);
-  print_response(sp.start_resume_playback(uri, 0, 0));
+  char* uris[] = {uri,uri};
+  print_response(sp.start_resume_playback(2,uris));
 
   Serial.print("Pause: ");
   print_response(sp.pause_playback());
@@ -136,7 +126,7 @@ void test_player(){
 
   Serial.print("Set Volume: ");
   print_response(sp.set_volume(50));
-}
+}*/
 //working
 void test_albums(){
   Serial.print("Get Album: ");
@@ -161,9 +151,10 @@ void test_albums(){
   print_response(sp.check_useres_saved_albums(3,album_ids));
 
   Serial.print("Get Releases: ");
-  print_response(sp.get_new_releases("CH", 1, 0));
+  print_response(sp.get_new_releases(1, 0));
 }
 //working
+/*
 void test_artist(){
   Serial.print("Get Artist: ");
   print_response(sp.get_artist(artist_id));
@@ -388,4 +379,4 @@ void test_users(){
   Serial.print("check_if_users_follow_playlist: ");
   print_response(sp.check_if_users_follow_playlist(playlist_id, 3, user_ids));
 
-}
+}*/
