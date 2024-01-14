@@ -60,3 +60,6 @@ To print the response you can use the ```print_response(response_obj)``` functio
     char* convert_id_to_uri(char* id, char* type, char* uri); 
 ```
 9. You can also include the namespace: ```using namespace Spotify_types;```. These are some types used in the library eg. TYPES, SIZES of uris/ids </br>
+### Working Devices
+- ESP32 WROOM</br>
+- Should also work on ESP2866 and other ESP32 models(Untested).</br>
