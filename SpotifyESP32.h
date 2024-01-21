@@ -129,21 +129,20 @@ class Spotify {
     ///@brief Get information about the user's current playback state, including track, track progress, and active device.
     ///@return response object containing http status code and reply
     response currently_playing();
-    ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. If no     context is provided, the user's currently playing context (e.g. album, playlist, etc.) is the target.
+    ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. 
     ///@param context_uri Spotify URI of the context to play (Required)
-    ///@param offset Indicates from where in the context playback should start, Only works with albums or Playlists(Optional)
+    ///@param offset Indicates from where in the context playback should start, Only works with albums or Playlists. NEEDS TO BE SET (0) IF ONLY URI IS PROVIDED
     ///@param position_ms Indicates from what position in the context playback should start in milliseconds(Optional)
     ///@param device_id Id of the device this command is targeting (Optional)
     ///@return response object containing http status code and reply
-    response start_resume_playback(char* context_uri, int offset = 0, int position_ms = 0, char* device_id = nullptr);
-    ///@brief Start or resume playback.
+    response start_resume_playback(char* context_uri, int offset, int position_ms = 0, char* device_id = nullptr);
+   ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. 
     ///@param size Number of uris in uris array
     ///@param uris Array of Spotify URIs of the tracks to play
     ///@param device_id Id of the device this command is targeting (Optional)
     ///@return response object containing http status code and reply
     response start_resume_playback(int size, char ** uris ,char* device_id = nullptr);
-    ///@brief Start or resume playback on provided device
-    ///@param device_id Id of the device this command is targeting(Optional)
+    ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. Targets the currently playing context.
     ///@return response object containing http status code and reply
     response start_resume_playback(char* device_id = nullptr);
     ///@brief Pause playback on Spotify
