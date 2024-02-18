@@ -22,12 +22,11 @@ namespace Spotify_types {
   int SIZE_OF_URI = 50;
 }
 
-Spotify::Spotify(const char* refresh_token, const char* redirect_uri, const char* client_id,const char* client_secret, bool debug_on, int max_num_retry){
+Spotify::Spotify(const char* client_id,const char* client_secret,int server_port, bool debug_on, int max_num_retry): _server(server_port){
   _retry = 0;
-  _refresh_token = refresh_token;
-  _redirect_uri = redirect_uri;
   _client_id = client_id;
   _client_secret = client_secret;
+  _port = server_port;
   _debug_on = debug_on;
   if(max_num_retry>0){
     _max_num_retry = max_num_retry;
@@ -35,6 +34,91 @@ Spotify::Spotify(const char* refresh_token, const char* redirect_uri, const char
   else{
     _max_num_retry = 1;
   }
+}
+
+Spotify::Spotify(const char* client_id,const char* client_secret,const char* refresh_token, bool debug_on, int max_num_retry)
+{
+  _port = 80;
+  _retry = 0;
+  _client_id = client_id;
+  _client_secret = client_secret;
+  strcpy(_refresh_token, refresh_token);
+  _debug_on = debug_on;
+  if(max_num_retry>0){
+    _max_num_retry = max_num_retry;
+  }
+  else{
+    _max_num_retry = 1;
+  }
+}
+
+std::function<void()> callback_fn(Spotify *spotify) {
+  return [spotify]() {
+        return spotify->callback_login_page();
+    };
+};
+
+void Spotify::callback_login_page() {
+  if (strcmp(_refresh_token, "") == 0) {
+    if (_server.args() == 0) {
+      char page[900];
+      snprintf(page,sizeof(page),_login_page, _client_id, _redirect_uri);
+      _server.send(200, "text/html", String(page));
+    } else {
+      if (_server.hasArg("code")) {
+        _server.send(200, "text/html", "Setup Complete <br>You can now close this page");
+        strncpy(_refresh_token, _server.arg("code").c_str(), sizeof(_refresh_token));
+        if(_debug_on){
+          Serial.printf("Refresh token: %s\n", _refresh_token);
+        }
+        _server.stop();
+      } else {
+        char page[900];
+        snprintf(page,sizeof(page),_login_page, _client_id, _redirect_uri);
+        _server.send(200, "text/html", String(page));
+      }
+    }
+  } else {
+    _server.send(200, "text/html", "Spotify setup complete");
+    _server.stop();
+  }
+}
+
+void Spotify::begin(){
+    if(strcmp(_refresh_token, "") == 0){
+      if(_port == 80){
+        sprintf(_redirect_uri, "http://%s/", WiFi.localIP().toString().c_str());
+        Serial.printf("Go to this url in your Browser to login to spotify: %s\n", _redirect_uri);
+      }
+      else{
+        sprintf(_redirect_uri, "http://%s:%d/", WiFi.localIP().toString().c_str(), _port);
+        Serial.printf("Go to this url in your Browser to login to spotify: %s\n", _redirect_uri);
+      }
+      _server.on("/", HTTP_GET, [this](){
+          if(_debug_on){
+              Serial.println("Send response to Root");
+          }
+          auto callback = callback_fn(this);
+          callback();
+      });
+      _server.begin();
+      if(_debug_on){
+          Serial.println("Server started");
+      }
+    }
+    else{
+      if(_debug_on){
+          Serial.println("Refresh token already set");
+      }
+    }
+}
+
+void Spotify::handle_client(){
+  _server.handleClient(); 
+}
+
+bool Spotify::is_auth(){
+  return strcmp(_refresh_token, "") != 0;
 }
 
 //Basic functions
@@ -47,8 +131,8 @@ response Spotify::RestApiPut(char* rest_url,int payload_size, char* payload){
   http.addHeader("Accept", "application/json");
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization","Bearer "+_access_token);
-
   http.addHeader("content-Length", String(payload_size));
+  
   int http_code=http.PUT(payload);
 
   response_obj.status_code = http_code;
@@ -267,25 +351,21 @@ char* Spotify::array_to_char(int size, char** array, char* result) {
   }
   return result;
 }
-void Spotify::array_to_json_array(int size,char** array, char* data, int data_size){
+void Spotify::array_to_json_array(int size, char** array, char* data, int data_size){
   DynamicJsonDocument doc(_max_char_size);
   JsonArray json_array = doc.to<JsonArray>();
-
   for (int i = 0; i<size; ++i) {
     json_array.add(array[i]);
   }
-
   serializeJson(json_array,data,data_size);
 }
 
 const char* Spotify::extract_endpoint(const char* url){
   std::regex pattern(R"(https://api\.spotify\.com/v1/([^?]+))");
-
     std::cmatch match;
     if (std::regex_search(url, match, pattern)) {
         return match[1].str().c_str();
     }
-
     return nullptr;
 }
 //API functions
@@ -1408,8 +1488,6 @@ char* Spotify::convert_id_to_uri(char* id, char* type,char * uri){
   return uri;
 }
 void print_response(response response_obj){
-  Serial.print("Status: ");
-  Serial.println(response_obj.status_code);
-  Serial.print("Reply: ");
-  Serial.println(response_obj.reply);
+  Serial.printf("Status: %d\n", response_obj.status_code);
+  Serial.printf("Reply: %s\n", response_obj.reply);
 } 

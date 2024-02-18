@@ -17,16 +17,20 @@
 #define ENABLE_USER
 #define ENABLE_SIMPIFIED
 
+#include <iostream>
+#include <functional>
+#include <map>
+#include <regex>
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <WebServer.h>
 #include <ArduinoJson.h>
-#include <base64.h>
 #include <UrlEncode.h>
-#include <map>
-#include <regex>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <base64.h>
+
+
 
 
 
@@ -117,14 +121,27 @@ struct recommendations {
 void print_response(response response_obj);
 class Spotify {
   public:
-    ///@brief Constructor for Spotify object
-    ///@param refresh_token Refresh token from Spotify(Required)
-    ///@param redirect_uri Redirect uri from Spotify(Required)
+    ///@brief Constructor for Spotify object without refresh token
     ///@param client_id Client id from Spotify(Required)
     ///@param client_secret Client secret from Spotify(Required)
+    ///@param server_port Port for the server to run on(default 80, if 80 is already used use anything above 1024)
     ///@param debug_on Debug mode on or off(default off)
     ///@param max_num_retry Max number of retries for a request(default 3)
-    Spotify(const char* refresh_token, const char* redirect_uri,const char* client_id,const char* client_secret, bool debug_on = false, int max_num_retry =3);
+    Spotify(const char* client_id,const char* client_secret, int server_port = 80, bool debug_on = false, int max_num_retry = 3);
+    ///@brief Constructor for Spotify object with refresh token
+    ///@param client_id Client id from Spotify(Required)
+    ///@param client_secret Client secret from Spotify(Required)
+    ///@param refresh_token Refresh token from Spotify(Required) if not authenticated use other constructor
+    ///@param debug_on Debug mode on or off(default off)
+    ///@param max_num_retry Max number of retries for a request(default 3)
+    Spotify(const char* client_id,const char* client_secret,const char* refresh_token, bool debug_on = false, int max_num_retry = 3);
+    /// @brief start the server and begin authentication
+    void begin();
+    /// @brief handle client requests necessary for authentication
+    void handle_client();
+    ///@brief Check if user is authenticated
+    ///@return true if user is authenticated
+    bool is_auth();
   #ifdef ENABLE_PLAYER
     ///@brief Get information about the user's current playback state, including track, track progress, and active device.
     ///@return response object containing http status code and reply
@@ -654,9 +671,9 @@ class Spotify {
     /// @param uri char array to store URI
     /// @return URI as pointer to char array
     char* convert_id_to_uri(char* id, char* type, char* uri); 
-    
 
   private:
+    WebServer _server;
     /// @brief Maximum number of items in one request
     static const int _max_num_items = 20;
     /// @brief Maximum size of char array(35 been the size of a uri + comma + 150 as buffer for url etc.)
@@ -668,9 +685,9 @@ class Spotify {
     /// @brief Maximum number of items in one request
     int _max_num_retry = 3;
     /// @brief Users refresh token
-    const char* _refresh_token;
+    char _refresh_token[300] = "";
     /// @brief Users set redirect uri
-    const char* _redirect_uri;
+    char _redirect_uri[100] = "";
     /// @brief Users set client id
     const char* _client_id;
     /// @brief Users set client secret
@@ -679,8 +696,13 @@ class Spotify {
     int _retry;
     /// @brief Debug mode
     bool _debug_on;
+    /// @brief port
+    int _port;
     /// @brief Access token
     String  _access_token; 
+    /// @brief Callback function for login page
+    void callback_login_page();
+    friend std::function<void()> callback_fn(Spotify *spotify);
     /// @brief Get Access Token with refresh token
     /// @return Bool if token was successfully retrieved
     bool get_token();
@@ -744,7 +766,7 @@ class Spotify {
     /// @brief Extract endpoint from url with regex
     const char * extract_endpoint(const char* rest_url);
     /// @brief Root CA for Spotify API
-    const char* _spotify_root_ca = \
+    const char* _spotify_root_ca PROGMEM = \
     "-----BEGIN CERTIFICATE-----\n" \
     "MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\n" \
     "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n"\
@@ -767,5 +789,18 @@ class Spotify {
     "YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk\n"\
     "CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=\n"\
     "-----END CERTIFICATE-----\n";
+    const char* _login_page PROGMEM = R"=====(
+    <HTML>
+      <HEAD>
+        <TITLE>ESP Spotify Login</TITLE>
+      </HEAD>
+      <BODY>
+        <CENTER>
+          <H1>Spotify Login</H1>
+          <a href="https://accounts.spotify.com/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=ugc-image-upload playlist-read-collaborative playlist-modify-private playlist-modify-public playlist-read-private user-read-playback-position user-read-recently-played user-top-read user-modify-playback-state user-read-currently-playing user-read-playback-state user-read-private user-read-email user-library-modify user-library-read user-follow-modify user-follow-read streaming app-remote-control">Log in to spotify</a>
+        </CENTER>
+      </BODY>
+    </HTML>
+    )=====";
 };
 #endif
