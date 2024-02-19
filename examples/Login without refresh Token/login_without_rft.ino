@@ -4,9 +4,6 @@
 #include "config.h"
 using namespace Spotify_types;
 
-void connect_to_wifi();
-
-
 Spotify sp(CLIENT_ID, CLIENT_SECRET);
 
 void setup() {
