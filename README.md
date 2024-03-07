@@ -114,9 +114,9 @@ To print the response you can use the ```print_response(response_obj)``` functio
 ```
 - You can also include the namespace: ```using namespace Spotify_types;```. These are some types used in the library eg. TYPES, SIZES of uris/ids </br>
 ## Trouble Shooting
-- If you have any problems with the library you can use the debug mode to print out the data to the serial monitor. I recommend not setting the baud rate lower than 115200 as the data printed can be quite large which can lead to crash if the Serial communication is too slow </br>
+- If you have any problems with the library you can use the debug mode to print out the data to the serial monitor. I recommend not setting the baud rate lower than 115200 as the data printed can be quite large which can lead to crash if the Serial communication is too slow. </br>
 - If you have any problems with the library you can also use the [Spotify Web API Console](https://developer.spotify.com/console/) to test the endpoints. </br>
 - If there are still issues you can open an issue on this repository. </br>
-### Working Devices
+## Working Devices
 - ESP32 WROOM</br>
 - Should also work on ESP2866 and other ESP32 models(Untested).</br>

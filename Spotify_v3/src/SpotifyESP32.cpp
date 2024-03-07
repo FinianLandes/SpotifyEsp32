@@ -173,7 +173,7 @@ response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* pa
   if(payload_size>0){
     http.addHeader("content-Length", String(payload_size));
   }
-  int http_code;
+  int http_code = -1;
   if(strcmp(type, "GET") == 0){
     http_code = http.GET();
   }
@@ -819,36 +819,37 @@ response Spotify::create_playlist(char* user_id, char* name, bool is_public, boo
 
   return RestApiPost(url, payload_size, payload);
 }
-response Spotify::get_featured_playlists( int limit, int offset,char* timestamp,char* country, char* locale) {
-  char url[200];
-  if(timestamp != nullptr){
-    if((country == nullptr)&&(locale == nullptr)){
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?timestamp=%s&limit=%d&offset=%d", timestamp, limit, offset);
+response Spotify::get_featured_playlists(int limit, int offset, char* timestamp, char* country, char* locale) {
+    char url[200];
+    if (timestamp) {
+        if (!country && !locale) {
+            snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?timestamp=%s&limit=%d&offset=%d", timestamp, limit, offset);
+        }
+        else if (!country && locale) {
+            snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?locale=%s&timestamp=%s&limit=%d&offset=%d", locale, timestamp, limit, offset);
+        }
+        else if (country && !locale) {
+            snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?country=%s&timestamp=%s&limit=%d&offset=%d", country, timestamp, limit, offset);
+        }
+        else {
+            snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?country=%s&locale=%s&timestamp=%s&limit=%d&offset=%d", country, locale, timestamp, limit, offset);
+        }
     }
-    else if((country == nullptr)&&(locale != nullptr)){
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?locale=%s&timestamp=%s&limit=%d&offset=%d", locale, timestamp, limit, offset);
+    else {
+        if (!country && !locale) {
+            snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?limit=%d&offset=%d", limit, offset);
+        }
+        else if (!country && locale) {
+            snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?locale=%s&limit=%d&offset=%d", locale, limit, offset);
+        }
+        else if (country && !locale) {
+            snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?country=%s&limit=%d&offset=%d", country, limit, offset);
+        }
+        else {
+            snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?country=%s&locale=%s&limit=%d&offset=%d", country, locale, limit, offset);
+        }
     }
-    else if((country != nullptr)&&(locale == nullptr)){
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?country=%s&timestamp=%s&limit=%d&offset=%d", country, timestamp, limit, offset);
-    }
-    else{
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?country=%s&locale=%s&timestamp=%s&limit=%d&offset=%d", country, locale, timestamp, limit, offset);
-    }
-  }else{
-    if((country == nullptr)&&(locale == nullptr)){
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?limit=%d&offset=%d", limit, offset);
-    }
-    else if((country == nullptr)&&(locale != nullptr)){
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?locale=%s&limit=%d&offset=%d", locale, limit, offset);
-    }
-    else if((country != nullptr)&&(locale == nullptr)){
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?country=%s&limit=%d&offset=%d", country, limit, offset);
-    }
-    else{
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/browse/featured-playlists?country=%s&locale=%s&limit=%d&offset=%d", country, locale, limit, offset);
-    }
-  }
-  return RestApiGet(url);
+    return RestApiGet(url);
 }
 response Spotify::get_category_playlists(char* category_id, int limit, int offset, char* country) {
   char url[200];
@@ -880,7 +881,7 @@ response Spotify::add_custom_playlist_cover_image(char* playlist_id, char* data)
 response Spotify::search(char* q, int type_size, char** type, int limit, int offset, char* market){
   char url[_max_char_size];
   char arr[_max_char_size];
-  if(market != nullptr){
+  if(market){
     if(type_size == 0){
       snprintf(url, sizeof(url), "https://api.spotify.com/v1/search?q=%s&limit=%d&offset=%d&market=%s", q, limit, offset, market);
     }
@@ -891,10 +892,10 @@ response Spotify::search(char* q, int type_size, char** type, int limit, int off
   }
   else{
     if(type_size == 0){
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/search?q=%s&limit=%d&offset=%d&market=%s", q, limit, offset, market);
+      snprintf(url, sizeof(url), "https://api.spotify.com/v1/search?q=%s&limit=%d&offset=%d", q, limit, offset);
     }
     else{
-      snprintf(url, sizeof(url), "https://api.spotify.com/v1/search?q=%s&type=%s&limit=%d&offset=%d&market=%s", q, array_to_char(type_size, type, arr), limit, offset, market);
+      snprintf(url, sizeof(url), "https://api.spotify.com/v1/search?q=%s&type=%s&limit=%d&offset=%d", q, array_to_char(type_size, type, arr), limit, offset);
     }
   }
 
@@ -1230,7 +1231,7 @@ response Spotify::unfollow_playlist(char* playlist_id) {
 
   return RestApiDelete(url);
 }
-response Spotify::get_followed_artists(char* type, char* after, int limit) {
+response Spotify::get_followed_artists(char* after, char* type, int limit) {
   char url[100];
   snprintf(url, sizeof(url), "https://api.spotify.com/v1/me/following?type=%s&after=%s&limit=%d", type, after, limit);
 

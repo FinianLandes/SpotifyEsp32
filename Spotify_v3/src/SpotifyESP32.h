@@ -139,8 +139,8 @@ class Spotify {
     void begin();
     /// @brief handle client requests necessary for authentication
     void handle_client();
-    ///@brief Check if user is authenticated
-    ///@return true if user is authenticated
+    /// @brief Check if user is authenticated
+    /// @return true if user is authenticated
     bool is_auth();
   #ifdef ENABLE_PLAYER
     ///@brief Get information about the user's current playback state, including track, track progress, and active device.
@@ -479,7 +479,7 @@ class Spotify {
     /// @param type A comma-separated list of item types to search across, needs to be set to nullptr if limit, offset or market is used and type is not used
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
-    /// @param market An ISO 3166-1 alpha-2 country code or the string from_token, Provide this parameter if you want to apply Track Relinking
+    /// @param market An ISO 3166-1 alpha-2 country code or the string from_token. Provide this parameter if you want the list of returned items to be relevant to a particular country.
     /// @return response object containing http status code and reply
     response search(char* q,int type_size = 0, char** type = nullptr, int limit = 10, int offset = 0, char* market = nullptr);
     #endif
