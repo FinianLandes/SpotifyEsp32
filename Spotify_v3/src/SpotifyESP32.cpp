@@ -9,6 +9,9 @@ namespace Spotify_types {
   char* TYPE_ARTIST = "artist";
   char* TYPE_TRACK = "track";
   char* TYPE_PLAYLIST = "playlist";
+  char* TYPE_SHOW = "show";
+  char* TYPE_EPISODE = "episode";
+  char* TYPE_AUDIOBOOK = "audiobook";
   char* TOP_TYPE_ARTIST = "artists";
   char* TOP_TYPE_TRACKS = "tracks";
   char* GROUP_ALBUM = "album";
@@ -18,6 +21,8 @@ namespace Spotify_types {
   char* TIME_RANGE_SHORT = "short_term";
   char* TIME_RANGE_MEDIUM = "medium_term";
   char* TIME_RANGE_LONG = "long_term";
+  char* FOLLOW_TYPE_ARTIST = "artist";
+  char* FOLLOW_TYPE_USER = "user";
   int SIZE_OF_ID = 40;
   int SIZE_OF_URI = 50;
 }
@@ -170,17 +175,16 @@ response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* pa
   http.addHeader("Accept", "application/json");
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization","Bearer "+_access_token);
-  if(payload_size>0){
-    http.addHeader("content-Length", String(payload_size));
-  }
   int http_code = -1;
   if(strcmp(type, "GET") == 0){
     http_code = http.GET();
   }
   else if(strcmp(type, "PUT") == 0){
+    http.addHeader("content-Length", String(payload_size));
     http_code = http.PUT(payload);
   }
   else if(strcmp(type, "POST") == 0){
+    http.addHeader("content-Length", String(payload_size));
     http_code = http.POST(payload);
   }
   else if(strcmp(type, "DELETE") == 0){
@@ -265,7 +269,7 @@ bool Spotify::get_token(){
 
 void Spotify::init_response(response* response_obj){
   response_obj -> status_code = -1;
-  response_obj -> reply ="If you see this something went wrong";
+  response_obj -> reply ="If you see this something went wrong, if the issue persists please contact the developer";
 }
 char* Spotify::array_to_char(int size, char** array, char* result) {
   result[0] = '\0';
@@ -285,7 +289,6 @@ void Spotify::array_to_json_array(int size, char** array, char* data, int data_s
   }
   serializeJson(json_array,data,data_size);
 }
-
 const char* Spotify::extract_endpoint(const char* url){
   std::regex pattern(R"(https://api\.spotify\.com/v1/([^?]+))");
     std::cmatch match;
@@ -1025,7 +1028,7 @@ response Spotify::get_recommendations(recommendations& recom, int limit){
 
   for (const auto& param : char_params) {
     char value[100];
-    snprintf(value, sizeof(value), "&%s%s",param.first, param.second);
+    snprintf(value, sizeof(value), "&%s=%s",param.first, param.second);
     strcat(url, value);
   }
   for(const auto& param : float_params){
@@ -1033,7 +1036,6 @@ response Spotify::get_recommendations(recommendations& recom, int limit){
     snprintf(value, sizeof(value), "&%s=%f",param.first, param.second);
     strcat(url, value);
   }
-
   return RestApiGet(url);
 }
 bool Spotify::is_valid_value(float param) {

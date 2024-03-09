@@ -43,6 +43,9 @@ namespace Spotify_types {
   extern char* TYPE_ALBUM;
   extern char* TYPE_ARTIST;
   extern char* TYPE_TRACK;
+  extern char* TYPE_SHOW;
+  extern char* TYPE_EPISODE;
+  extern char* TYPE_AUDIOBOOK;
   extern char* TYPE_PLAYLIST;
   extern char* TOP_TYPE_ARTIST;
   extern char* TOP_TYPE_TRACKS;
@@ -53,6 +56,8 @@ namespace Spotify_types {
   extern char* TIME_RANGE_SHORT;
   extern char* TIME_RANGE_MEDIUM;
   extern char* TIME_RANGE_LONG;
+  extern char* FOLLOW_TYPE_ARTIST;
+  extern char* FOLLOW_TYPE_USER;
   extern int SIZE_OF_ID;
   extern int SIZE_OF_URI;
 
@@ -475,13 +480,13 @@ class Spotify {
   #ifdef ENABLE_SEARCH
     /// @brief Search for an item
     /// @param q Search query keywords and optional field filters and operators
-    /// @param type_size Number of item types in type array,needs to e set to 0 if limit, offset or market is used and type is not used
-    /// @param type A comma-separated list of item types to search across, needs to be set to nullptr if limit, offset or market is used and type is not used
+    /// @param type_size Number of item types in type array
+    /// @param type An array of item types to search across
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
     /// @param market An ISO 3166-1 alpha-2 country code or the string from_token. Provide this parameter if you want the list of returned items to be relevant to a particular country.
     /// @return response object containing http status code and reply
-    response search(char* q,int type_size = 0, char** type = nullptr, int limit = 10, int offset = 0, char* market = nullptr);
+    response search(char* q,int type_size , char** type , int limit = 10, int offset = 0, char* market = nullptr);
     #endif
   #ifdef ENABLE_SHOWS
     /// @brief Get Spotify information for a single show
