@@ -63,7 +63,65 @@ std::function<void()> callback_fn(Spotify *spotify) {
         return spotify->server_on_root();
     };
 };
+bool Spotify::get_refresh_token() {
+  bool reply = false;
+  if (!_client.connect("accounts.spotify.com", 443)) {
+    return false;
+  }
 
+  String authorization = String(_client_id) + ":" + String(_client_secret);
+  authorization.trim();
+  authorization = "Basic " + base64::encode(authorization);
+
+  String payload = "grant_type=authorization_code&code=" + String(_auth_code) + "&redirect_uri=" + String(_redirect_uri);
+
+  _client.println("POST /api/token HTTP/1.1");
+  _client.println("Host: accounts.spotify.com");
+  _client.println("User-Agent: ESP32");
+  _client.println("Connection: close");
+  _client.println("Content-Type: application/x-www-form-urlencoded");
+  _client.println("Authorization: " + authorization);
+  _client.println("Content-Length: " + String(payload.length()));
+  _client.println();
+  _client.println(payload);
+
+  String line;
+  int http_code = -1;
+  while (_client.connected()) {
+    line = _client.readStringUntil('\n');
+    if (line.startsWith("HTTP/1.1")) {
+      http_code = line.substring(9, 12).toInt();
+    }
+    if (line == "\r") {
+      break;
+    }
+  }
+
+  String response;
+  while (_client.available()) {
+    response += _client.readStringUntil('\n');
+  }
+
+  if (_debug_on) {
+    Serial.printf("POST \"Refresh token\" Status: %d \n", http_code);
+    Serial.printf("Reply: %s\n", response.c_str());
+  }
+
+  if (http_code >= 200 && http_code <= 299) {
+    JsonDocument doc;
+    deserializeJson(doc, response);
+    const char* temp = doc["refresh_token"];
+    strncpy(_refresh_token, temp, sizeof(_refresh_token));
+    Serial.printf("Refresh Token: %s\n", _refresh_token);
+    reply = true;
+  } else {
+    reply = false;
+  }
+
+  _client.stop();
+  return reply;
+}
+/*
 bool Spotify::get_refresh_token(){
   char url[40] = "https://accounts.spotify.com/api/token";
   HTTPClient http;
@@ -93,7 +151,7 @@ bool Spotify::get_refresh_token(){
   }
   http.end();
   return strcmp(_refresh_token, "") != 0;
-}
+}*/
 
 void Spotify::server_on_root() {
   if (strcmp(_refresh_token, "") == 0) {
@@ -129,6 +187,7 @@ void Spotify::server_on_root() {
 }
 
 void Spotify::begin(){
+  _client.setCACert(_spotify_root_ca);
   if(strcmp(_refresh_token, "") == 0){
     if(_port == 80){
       snprintf(_redirect_uri,sizeof(_redirect_uri), "http://%s/", WiFi.localIP().toString().c_str());
@@ -168,37 +227,59 @@ bool Spotify::is_auth(){
 //Basic functions
 response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* payload){
   response response_obj;
-  init_response(&response_obj);
-
-  HTTPClient http;
-  http.begin(rest_url,_spotify_root_ca);
-  http.addHeader("Accept", "application/json");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization","Bearer "+_access_token);
   int http_code = -1;
-  if(strcmp(type, "GET") == 0){
-    http_code = http.GET();
-  }
-  else if(strcmp(type, "PUT") == 0){
-    http.addHeader("content-Length", String(payload_size));
-    http_code = http.PUT(payload);
-  }
-  else if(strcmp(type, "POST") == 0){
-    http.addHeader("content-Length", String(payload_size));
-    http_code = http.POST(payload);
-  }
-  else if(strcmp(type, "DELETE") == 0){
-    http_code = http.sendRequest("DELETE", payload);
-  }
-  response_obj.status_code = http_code;
   String reply = "";
   JsonDocument doc;
+  init_response(&response_obj);
 
-  if(http.getSize()>0){
-    reply = http.getString();
-    deserializeJson(doc, reply);
+  if (!_client.connect(_host, 443)) {
+    response_obj.reply = "Connection failed";
+    return response_obj;
   }
-
+  _client.println(String(type) + " " + String(rest_url) + " HTTP/1.1");
+  _client.println("Host: " + String(_host));
+  _client.println("User-Agent: ESP32");
+  _client.println("Connection: close");
+  _client.println("Accept: application/json");
+  
+  _client.println("Authorization: Bearer " + String(_access_token));
+  _client.println("Content-Type: application/json");
+  if(strcmp(type, "GET") == 0){
+    _client.println();
+  }
+  else if(strcmp(type, "PUT") == 0){
+    _client.println("Content-Length: " + String(payload_size));
+    _client.println();
+    _client.println(payload);
+  }
+  else if(strcmp(type, "POST") == 0){
+    _client.println("Content-Length: " + String(payload_size));
+    _client.println();
+    _client.println(payload);
+  }
+  else if(strcmp(type, "DELETE") == 0){
+    _client.println();
+    _client.println(payload);
+  }
+  int line_num = 0;
+  while (_client.connected()) {
+    String line = _client.readStringUntil('\n'); 
+    if(!line_num){
+      http_code = line.substring(9,12).toInt();
+    }
+    if (line == "\r") {
+      break;
+    }
+    line_num++;
+    if(_debug_on){
+      Serial.println(line);
+    }
+  }
+  response_obj.status_code = http_code;
+  while(_client.available()){
+    reply = reply + _client.readStringUntil('\n') + "\n";
+  }
+  deserializeJson(doc, reply);
   if(_debug_on){
     const char* endpoint = extract_endpoint(rest_url);
     Serial.printf("%s \"%s\" Status: %i\n", type, endpoint, http_code);
@@ -219,11 +300,11 @@ response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* pa
       response_obj.reply = message;
     }
   }
-  http.end();
-  _retry = 0;
-
+  
+  _client.stop();
   return response_obj;
 }
+
 response Spotify::RestApiPut(char* rest_url,int payload_size, char* payload){
   return RestApi(rest_url, "PUT", payload_size, payload);
 }
@@ -236,6 +317,62 @@ response Spotify::RestApiPost(char* rest_url,int payload_size, char* payload){
 response Spotify::RestApiDelete(char* rest_url, char* payload){
   return RestApi(rest_url, "DELETE", 0, payload);
 }
+bool Spotify::get_token() {
+  bool reply = false;
+  if (!_client.connect("accounts.spotify.com", 443)) {
+    return false;
+  }
+  String authorization = String(_client_id) + ":" + String(_client_secret);
+  authorization.trim();
+  authorization = "Basic " + base64::encode(authorization);
+
+  String payload = "grant_type=refresh_token&refresh_token=" + String(_refresh_token);
+
+  _client.println("POST /api/token HTTP/1.1");
+  _client.println("Host: accounts.spotify.com");
+  _client.println("User-Agent: ESP32");
+  _client.println("Connection: close");
+  _client.println("Content-Type: application/x-www-form-urlencoded");
+  _client.println("Authorization: " + authorization);
+  _client.println("Content-Length: " + String(payload.length()));
+  _client.println();
+  _client.println(payload);
+
+  String line;
+  int http_code = -1;
+  while (_client.connected()) {
+    line = _client.readStringUntil('\n');
+    if (line.startsWith("HTTP/1.1")) {
+      http_code = line.substring(9, 12).toInt();
+    }
+    if (line == "\r") {
+      break;
+    }
+  }
+
+  String response;
+  while (_client.available()) {
+    response += _client.readStringUntil('\n');
+  }
+
+  if (_debug_on) {
+    Serial.printf("POST \"token\" Status: %d \n", http_code);
+    Serial.printf("Reply: %s\n", response.c_str());
+  }
+
+  if (http_code >= 200 && http_code <= 299) {
+    JsonDocument doc;
+    deserializeJson(doc, response);
+    _access_token = doc["access_token"].as<String>();
+    reply = true;
+  } else {
+    reply = false;
+  }
+
+  _client.stop();
+  return reply;
+}
+/*
 bool Spotify::get_token(){
   bool reply = false;
   HTTPClient http;
@@ -265,7 +402,7 @@ bool Spotify::get_token(){
   }
   http.end();
   return reply;
-}
+}*/
 
 void Spotify::init_response(response* response_obj){
   response_obj -> status_code = -1;

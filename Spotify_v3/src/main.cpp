@@ -17,7 +17,7 @@ void setup() {
         sp.handle_client();
     }
     Serial.println("Authenticated");
-    check_all();
+    Serial.println(sp.current_artist_names());
     Serial.println("Done");
 }
 
@@ -34,9 +34,9 @@ void connect_to_wifi(){
     Serial.printf("\nConnected to WiFi\n");
 }
 void check_all(){
-    /*Serial.println("Player");
+    Serial.println("Player");
     check_one(sp.currently_playing());
-    check_one(sp.start_resume_playback("spotify:track:6xaMXvpkmVow1RAinlthUT"));
+    /*check_one(sp.start_resume_playback("spotify:track:6xaMXvpkmVow1RAinlthUT"));
     check_one(sp.pause_playback());
     check_one(sp.start_resume_playback());
     check_one(sp.skip());

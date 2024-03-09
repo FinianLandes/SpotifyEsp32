@@ -20,7 +20,6 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <WebServer.h>
 #include <ArduinoJson.h>
@@ -679,6 +678,8 @@ class Spotify {
 
   private:
     WebServer _server;
+    WiFiClientSecure _client;
+    const char* _host = "api.spotify.com";
     /// @brief Maximum number of items in one request
     static const int _max_num_items = 20;
     /// @brief Maximum size of char array(35 been the size of a uri + comma + 150 as buffer for url etc.)
