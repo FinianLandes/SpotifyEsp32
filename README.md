@@ -6,6 +6,7 @@ This library is a wrapper for the [Spotify Web API](https://developer.spotify.co
 - [WifiClientSecure](https://github.com/espressif/arduino-esp32/tree/master/libraries/WiFiClientSecure);
 - [WiFi](https://www.arduino.cc/en/Reference/WiFi) </br>
 - [UrlEncode](https://github.com/plageoj/urlencode) </br>
+- [base64](https://github.com/Densaugeo/base64_arduino) </br>
 
 ## Setup
 1. Create a new application on the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications) and copy the Client ID and Client Secret into your code. Leave the developer dashboard open as you will need to set the callback url later. </br>
