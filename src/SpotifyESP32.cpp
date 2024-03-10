@@ -1,4 +1,4 @@
-#include "SpotifyESP32.h"
+#include "SpotifyEsp32.h"
 namespace Spotify_types {
   bool SHUFFLE_ON = true;
   bool SHUFFLE_OFF = false;
