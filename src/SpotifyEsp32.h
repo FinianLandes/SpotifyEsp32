@@ -1,5 +1,5 @@
-#ifndef SpotifyESP32
-#define SpotifyESP32
+#ifndef SpotifyEsp32
+#define SpotifyEsp32
 
 #define ENABLE_PLAYER
 #define ENABLE_ALBUM
