@@ -121,37 +121,6 @@ bool Spotify::get_refresh_token() {
   _client.stop();
   return reply;
 }
-/*
-bool Spotify::get_refresh_token(){
-  char url[40] = "https://accounts.spotify.com/api/token";
-  HTTPClient http;
-
-  String authorization = String(_client_id) + ":" + String(_client_secret);
-  authorization.trim();
-  authorization = "Basic " + base64::encode(authorization);
-
-  http.begin(url, _spotify_root_ca);
-  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  http.addHeader("Authorization", authorization);
-
-  String payload = "grant_type=authorization_code&code=" + String(_auth_code) + "&redirect_uri=" + String(_redirect_uri);
-  int http_code = http.POST(payload);
-
-  if (_debug_on) {
-    Serial.printf("POST \"Refresh token\" Status: %d \n", http_code);
-    Serial.printf("Reply: %s\n", http.getString().c_str());
-  }
-  if ((http_code >= 200) && (http_code <= 299)) {
-    String response = http.getString();
-    JsonDocument doc;
-    deserializeJson(doc, response);
-    const char* temp = doc["refresh_token"];
-    strncpy(_refresh_token, temp, sizeof(_refresh_token));
-    Serial.printf("Refresh Token: %s\n", _refresh_token);
-  }
-  http.end();
-  return strcmp(_refresh_token, "") != 0;
-}*/
 
 void Spotify::server_on_root() {
   if (strcmp(_refresh_token, "") == 0) {
@@ -372,37 +341,6 @@ bool Spotify::get_token() {
   _client.stop();
   return reply;
 }
-/*
-bool Spotify::get_token(){
-  bool reply = false;
-  HTTPClient http;
-  char url[40] = "https://accounts.spotify.com/api/token";
-  String authorization = String(_client_id) + ":" + String(_client_secret);
-  authorization.trim();
-  authorization = "Basic " + base64::encode(authorization);
-  http.begin(url, _spotify_root_ca);
-  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  http.addHeader("Authorization", authorization);
-
-  String payload = "grant_type=refresh_token&refresh_token=" + String(_refresh_token);
-  int http_code = http.POST(payload);
-  if (_debug_on) {
-    Serial.printf("POST \"token\" Status: %d \n", http_code);
-    Serial.printf("Reply: %s\n", http.getString().c_str());
-  }
-  if ((http_code >=200)&&(http_code<=299)) {
-    String response = http.getString();
-    JsonDocument doc;
-    deserializeJson(doc, response);
-    _access_token = doc["access_token"].as<String>();
-    reply = true;
-  }
-  else{ 
-    reply = false;
-  }
-  http.end();
-  return reply;
-}*/
 
 void Spotify::init_response(response* response_obj){
   response_obj -> status_code = -1;
