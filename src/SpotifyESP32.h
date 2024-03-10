@@ -17,19 +17,18 @@
 #define ENABLE_USER
 #define ENABLE_SIMPIFIED
 
-#include <iostream>
-#include <functional>
-#include <map>
-#include <regex>
+
 #include <Arduino.h>
 #include <WiFi.h>
-#include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <UrlEncode.h>
 #include <base64.h>
-
+#include <iostream>
+#include <functional>
+#include <map>
+#include <regex>
 
 
 
@@ -43,6 +42,9 @@ namespace Spotify_types {
   extern char* TYPE_ALBUM;
   extern char* TYPE_ARTIST;
   extern char* TYPE_TRACK;
+  extern char* TYPE_SHOW;
+  extern char* TYPE_EPISODE;
+  extern char* TYPE_AUDIOBOOK;
   extern char* TYPE_PLAYLIST;
   extern char* TOP_TYPE_ARTIST;
   extern char* TOP_TYPE_TRACKS;
@@ -53,6 +55,8 @@ namespace Spotify_types {
   extern char* TIME_RANGE_SHORT;
   extern char* TIME_RANGE_MEDIUM;
   extern char* TIME_RANGE_LONG;
+  extern char* FOLLOW_TYPE_ARTIST;
+  extern char* FOLLOW_TYPE_USER;
   extern int SIZE_OF_ID;
   extern int SIZE_OF_URI;
 
@@ -139,8 +143,8 @@ class Spotify {
     void begin();
     /// @brief handle client requests necessary for authentication
     void handle_client();
-    ///@brief Check if user is authenticated
-    ///@return true if user is authenticated
+    /// @brief Check if user is authenticated
+    /// @return true if user is authenticated
     bool is_auth();
   #ifdef ENABLE_PLAYER
     ///@brief Get information about the user's current playback state, including track, track progress, and active device.
@@ -153,7 +157,7 @@ class Spotify {
     ///@param device_id Id of the device this command is targeting (Optional)
     ///@return response object containing http status code and reply
     response start_resume_playback(char* context_uri, int offset, int position_ms = 0, char* device_id = nullptr);
-   ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. 
+    ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. 
     ///@param size Number of uris in uris array
     ///@param uris Array of Spotify URIs of the tracks to play
     ///@param device_id Id of the device this command is targeting (Optional)
@@ -475,13 +479,13 @@ class Spotify {
   #ifdef ENABLE_SEARCH
     /// @brief Search for an item
     /// @param q Search query keywords and optional field filters and operators
-    /// @param type_size Number of item types in type array,needs to e set to 0 if limit, offset or market is used and type is not used
-    /// @param type A comma-separated list of item types to search across, needs to be set to nullptr if limit, offset or market is used and type is not used
+    /// @param type_size Number of item types in type array
+    /// @param type An array of item types to search across
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
-    /// @param market An ISO 3166-1 alpha-2 country code or the string from_token, Provide this parameter if you want to apply Track Relinking
+    /// @param market An ISO 3166-1 alpha-2 country code or the string from_token. Provide this parameter if you want the list of returned items to be relevant to a particular country.
     /// @return response object containing http status code and reply
-    response search(char* q,int type_size = 0, char** type = nullptr, int limit = 10, int offset = 0, char* market = nullptr);
+    response search(char* q,int type_size , char** type , int limit = 10, int offset = 0, char* market = nullptr);
     #endif
   #ifdef ENABLE_SHOWS
     /// @brief Get Spotify information for a single show
@@ -674,6 +678,8 @@ class Spotify {
 
   private:
     WebServer _server;
+    WiFiClientSecure _client;
+    const char* _host = "api.spotify.com";
     /// @brief Maximum number of items in one request
     static const int _max_num_items = 20;
     /// @brief Maximum size of char array(35 been the size of a uri + comma + 150 as buffer for url etc.)
@@ -687,7 +693,7 @@ class Spotify {
     /// @brief Users set redirect uri
     char _redirect_uri[100] = "";
     /// @brief Users refresh token
-    char _refresh_token[300] = "";
+    char _refresh_token[200] = "";
     /// @brief user auth code
     char _auth_code[800] = "";
     /// @brief Users set client id
@@ -714,6 +720,12 @@ class Spotify {
     /// @brief Initialize response object
     /// @param response_obj Response object to initialize
     void init_response(response* response_obj);
+    /// @brief Make request to Spotify API
+    /// @param rest_url URL to make request to
+    /// @param type Type of request
+    /// @param payload_size Size of payload
+    /// @param payload Payload to send
+    response RestApi(char* rest_url, char* type, int payload_size = 0, char* payload = nullptr);
     /// @brief Make PUT request to Spotify API
     /// @param rest_url URL to make request to
     /// @param payload_size Size of payload
