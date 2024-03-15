@@ -116,9 +116,9 @@ To print the response you can use the ```print_response(response_obj)``` functio
 - You can also include the namespace: ```using namespace Spotify_types;```. These are some types used in the library eg. TYPES, SIZES of uris/ids </br>
 ## Useful Information
 Due to the Wifi and HTTPS this library is quite big, so i recommend setting the partitions table of your esp to use more than the default 1.2MB of flash as most esp32's have 4MB of which the biggest part is set for SPIFFS which in most cases isn't used. Here are some tutorials about setting the partitions table of your esp: <\br>
-- [Official Espressif Documentation](https://espressif-docs.readthedocs-hosted.com/projects/arduino-esp32/en/latest/tutorials/partition_table.html?highlight=partitions)<\br>
-- [Partition Table in the Arduino IDE](https://robotzero.one/arduino-ide-partitions/)<\br>
-- [Partition Table in Platform IO](https://docs.platformio.org/en/latest/platforms/espressif32.html)<\br>
+- [Official Espressif Documentation](https://espressif-docs.readthedocs-hosted.com/projects/arduino-esp32/en/latest/tutorials/partition_table.html?highlight=partitions)</br>
+- [Partition Table in the Arduino IDE](https://robotzero.one/arduino-ide-partitions/)</br>
+- [Partition Table in Platform IO](https://docs.platformio.org/en/latest/platforms/espressif32.html)</br>
 ## Trouble Shooting
 - If you have any problems with the library you can use the debug mode to print out the data to the serial monitor. I recommend not setting the baud rate lower than 115200 as the data printed can be quite large which can lead to crash if the Serial communication is too slow. </br>
 - If you have any problems with the library you can also use the [Spotify Web API Console](https://developer.spotify.com/console/) to test the endpoints. </br>
