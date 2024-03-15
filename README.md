@@ -115,7 +115,7 @@ To print the response you can use the ```print_response(response_obj)``` functio
 ```
 - You can also include the namespace: ```using namespace Spotify_types;```. These are some types used in the library eg. TYPES, SIZES of uris/ids </br>
 ## Useful Information
-Due to the Wifi and HTTPS this library is quite big, so i recommend setting the partitions table of your esp to use more than the default 1.2MB of flash as most esp32's have 4MB of which the biggest part is set for SPIFFS which in most cases isn't used. Here are some tutorials about setting the partitions table of your esp: <\br>
+Due to the Wifi and HTTPS this library is quite big, so i recommend setting the partitions table of your esp to use more than the default 1.2MB of flash as most esp32's have 4MB of which the biggest part is set for SPIFFS which in most cases isn't used. Here are some tutorials about setting the partitions table of your esp: </br>
 - [Official Espressif Documentation](https://espressif-docs.readthedocs-hosted.com/projects/arduino-esp32/en/latest/tutorials/partition_table.html?highlight=partitions)</br>
 - [Partition Table in the Arduino IDE](https://robotzero.one/arduino-ide-partitions/)</br>
 - [Partition Table in Platform IO](https://docs.platformio.org/en/latest/platforms/espressif32.html)</br>
