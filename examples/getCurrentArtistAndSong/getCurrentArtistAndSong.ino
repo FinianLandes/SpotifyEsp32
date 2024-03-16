@@ -1,7 +1,7 @@
 /*
     An example of how to authenticate with Spotify without using a refresh token and print Artist and Track via Serial
 
-    This example is useful to get the refresh token for the first time. It can also be used to authenticate every time without using the refresh token.
+In this example your current track will be printed to the serial and as soon as you listen to a new track that tracks information will be printed.
 
     15.03.2024
     Created by: Finian Landes
