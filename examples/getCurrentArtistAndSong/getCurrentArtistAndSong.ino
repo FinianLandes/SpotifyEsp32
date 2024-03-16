@@ -1,10 +1,14 @@
 /*
-    An example of how to authenticate with Spotify without using a refresh token.
+    An example of how to authenticate with Spotify without using a refresh token and print Artist and Track via Serial
 
     This example is useful to get the refresh token for the first time. It can also be used to authenticate every time without using the refresh token.
 
     15.03.2024
     Created by: Finian Landes
+
+    16.03.2024
+    edited by: Sascha Seidel
+        * added getting artist and trackname to print it Serial
 
     Documentation: https://github.com/FinianLandes/Spotify_Esp32
 */
@@ -19,9 +23,7 @@ const char* CLIENT_ID = "YOUR CLIENT ID FROM THE SPOTIFY DASHBOARD";
 const char* CLIENT_SECRET = "YOUR CLIENT SECRET FROM THE SPOTIFY DASHBOARD";
 const char* REFRESH_TOKEN = "YOUR REFRESH TOKEN";
 
-Spotify sp(CLIENT_ID, CLIENT_SECRET);//if you dont have a refresh Token
-//Uncomment following if u use a refresh Token
-//Spotify sp(CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN);
+Spotify sp(CLIENT_ID, CLIENT_SECRET);
 
 void setup() {
     Serial.begin(115200);
@@ -32,15 +34,26 @@ void setup() {
         sp.handle_client();
     }
     Serial.println("Authenticated");
-    Serial.print("Currently playing: ");
-    Serial.print(sp.current_track_name());
-    Serial.print(" by ");
-    Serial.println(current_artist_names());
 }
 
 void loop() {
-    // put your main code here, to run repeatedly:
+  static String lastArtist;
+  static String lastTrackname;
+  
+  String currentArtist = sp.current_artist_names();
+  String currentTrackname = sp.current_track_name();
+  
+  if (lastArtist != currentArtist && currentArtist != "Something went wrong" && !currentArtist.isEmpty()) {
+    lastArtist = currentArtist;
+    Serial.println("Artist: " + lastArtist);
+  }
+  
+  if (lastTrackname != currentTrackname && currentTrackname != "Something went wrong" && currentTrackname != "null") {
+    lastTrackname = currentTrackname;
+    Serial.println("Track: " + lastTrackname);
+  }
 }
+
 void connect_to_wifi(){
     WiFi.begin(SSID, PASSWORD);
     Serial.print("Connecting to WiFi...");
