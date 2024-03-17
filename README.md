@@ -48,7 +48,7 @@ void connect_to_wifi(){
     Serial.printf("\nConnected to WiFi\n");
 }
 ```
-3. When exectuting this code you will have to open the serial monitor and copy the url into your browser. On this page you Login with your spotify account (Most endpoints only work with premium) and authorize your application to access your data. Now you will be redirected to page where your refresh token will be shown. So you don't have to open the browser every time you restart your esp i would recommend to copy the refresh token and use the other constructor afterwards:
+3. When exectuting this code you will have to open the serial monitor and copy the url shown ther into the developer dashboard and set it as callback url afterwards paste it into your browser. A page should open, on this page you login with your spotify account (Most endpoints only work with premium) and authorize your application to access your data. Now you will be redirected to page where your refresh token will be shown. So you don't have to open the browser every time you restart your esp i would recommend to copy the refresh token and use the other constructor afterwards:
 ```c++
 #include <Arduino.h>
 #include <WiFi.h>
