@@ -17,7 +17,7 @@ In this example your current track will be printed to the serial and as soon as 
 #include <WiFi.h>
 #include <SpotifyESP32.h>
 
-const char* SSID = "YOUR WIFI SSID";
+char* SSID = "YOUR WIFI SSID";
 const char* PASSWORD = "YOUR WIFI PASSWORD";
 const char* CLIENT_ID = "YOUR CLIENT ID FROM THE SPOTIFY DASHBOARD";
 const char* CLIENT_SECRET = "YOUR CLIENT SECRET FROM THE SPOTIFY DASHBOARD";
@@ -37,21 +37,21 @@ void setup() {
 }
 
 void loop() {
-  static String lastArtist;
-  static String lastTrackname;
-  
-  String currentArtist = sp.current_artist_names();
-  String currentTrackname = sp.current_track_name();
-  
-  if (lastArtist != currentArtist && currentArtist != "Something went wrong" && !currentArtist.isEmpty()) {
-    lastArtist = currentArtist;
-    Serial.println("Artist: " + lastArtist);
-  }
-  
-  if (lastTrackname != currentTrackname && currentTrackname != "Something went wrong" && currentTrackname != "null") {
-    lastTrackname = currentTrackname;
-    Serial.println("Track: " + lastTrackname);
-  }
+    static String lastArtist;
+    static String lastTrackname;
+    
+    String currentArtist = sp.current_artist_names();
+    String currentTrackname = sp.current_track_name();
+    
+    if (lastArtist != currentArtist && currentArtist != "Something went wrong" && !currentArtist.isEmpty()) {
+        lastArtist = currentArtist;
+        Serial.println("Artist: " + lastArtist);
+    }
+    
+    if (lastTrackname != currentTrackname && currentTrackname != "Something went wrong" && currentTrackname != "null") {
+        lastTrackname = currentTrackname;
+        Serial.println("Track: " + lastTrackname);
+    }
 }
 
 void connect_to_wifi(){

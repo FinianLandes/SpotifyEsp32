@@ -48,40 +48,10 @@ void connect_to_wifi(){
     Serial.printf("\nConnected to WiFi\n");
 }
 ```
-3. When exectuting this code you will have to open the serial monitor and copy the url shown ther into the developer dashboard and set it as callback url afterwards paste it into your browser. A page should open, on this page you login with your spotify account (Most endpoints only work with premium) and authorize your application to access your data. Now you will be redirected to page where your refresh token will be shown. So you don't have to open the browser every time you restart your esp i would recommend to copy the refresh token and use the other constructor afterwards:
-```c++
-#include <Arduino.h>
-#include <WiFi.h>
-#include "SpotifyESP32.h"
+3. Now you will have to set the callback url in the Spotify Developer Dashboard before you can log in the callback url is the url printed to the serial plus callback so e.g. if your url printed to the serial is: ```https://192.1.1.128/``` then the callback url will be ```https://192.1.1.128/callback```  </br>
 
-const char* SSID = "your_ssid";
-const char* PASSWORD = "your_password";
-const char* CLIENT_ID = "your_client_id";
-const char* CLIENT_SECRET = "your_client_secret";
-const char* REFRESH_TOKEN = "your_refresh_token";
-
-//Create an instance of the Spotify class Optional: Debug mode and number of retries
-Spotify sp(CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN);
-
-void setup() {
-    Serial.begin(115200);
-    connect_to_wifi();//Connect to your wifi
-}
-
-void loop() {
-    //Add your code here
-}
-void connect_to_wifi(){
-    WiFi.begin(SSID, PASSWORD);
-    Serial.print("Connecting to WiFi...");
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.print(".");
-    }
-    Serial.printf("\nConnected to WiFi\n");
-}
-```
-4. Now you can use the library. </br>
+4. If you want to set your tokens during runtime you can use the same code pass an empty char array to the constructor and set the tokens later in the webserver. By calling the "get_tokens" function you could then save these tokens with [SPIFFS](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/storage/spiffs.html). And during next runtime pass them from the memory. </br>
+5. Now you can use the library. </br>
 ## Usage
 - The normal functions return an response object. You can get the http code of type int with ```response_obj.status_code``` and the response message of type String with ```response_obj.reply```. </br>
 To print the response you can use the ```print_response(response_obj)``` function. </br>
