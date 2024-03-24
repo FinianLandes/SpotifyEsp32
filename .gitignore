@@ -9,5 +9,5 @@ src/main.cpp
 partitions.csv
 src/SpotifyEsp32Web.cpp
 src/SpotifyEsp32Web.h
-src/src.ino
+src/src_ignore.ino
 sdkconfig.esp32doit-devkit-v1
