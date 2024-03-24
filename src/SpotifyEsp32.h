@@ -59,6 +59,8 @@ namespace Spotify_types {
   extern char* FOLLOW_TYPE_USER;
   extern int SIZE_OF_ID;
   extern int SIZE_OF_URI;
+  extern int SIZE_OF_SECRET_ID;
+  extern int SIZE_OF_REFRESH_TOKEN;
 
 }
 
@@ -67,7 +69,11 @@ typedef struct{
   int status_code;
   String reply;
 } response;
-
+typedef struct{
+  const char* client_id;
+  const char* client_secret;
+  const char* refresh_token;
+} user_tokens;
 /// @brief Recommendation object, used to create recommendations
 struct recommendations {
   char** seed_artists;
@@ -126,19 +132,22 @@ void print_response(response response_obj);
 class Spotify {
   public:
     ///@brief Constructor for Spotify object without refresh token
-    ///@param client_id Client id from Spotify(Required)
-    ///@param client_secret Client secret from Spotify(Required)
+    ///@param client_id Client id from Spotify, if you want to set it during runtime provide an empty char* with enough space 
+    ///@param client_secret Client secret from Spotify, if you want to set it during runtime provide an empty char* with enough space 
     ///@param server_port Port for the server to run on(default 80, if 80 is already used use anything above 1024)
     ///@param debug_on Debug mode on or off(default off)
     ///@param max_num_retry Max number of retries for a request(default 3)
-    Spotify(const char* client_id,const char* client_secret, int server_port = 80, bool debug_on = false, int max_num_retry = 3);
+    Spotify(const char* client_id, const char* client_secret, int server_port = 80, bool debug_on = false, int max_num_retry = 3);
     ///@brief Constructor for Spotify object with refresh token
-    ///@param client_id Client id from Spotify(Required)
-    ///@param client_secret Client secret from Spotify(Required)
-    ///@param refresh_token Refresh token from Spotify(Required) if not authenticated use other constructor
+    ///@param server Your WebServer
+    ///@param client_id Client id from Spotify, if you want to set it during runtime provide an empty char* with enough space 
+    ///@param client_secret Client secret from Spotify,if you want to set it during runtime provide an empty char* with enough space 
+    ///@param refresh_token Refresh token from Spotify, if you want to set it during runtime provide an empty char* with enough space 
+    ///@param server_port Port for the server to run on(default 80, if 80 is already used use anything above 1024)
     ///@param debug_on Debug mode on or off(default off)
     ///@param max_num_retry Max number of retries for a request(default 3)
-    Spotify(const char* client_id,const char* client_secret,const char* refresh_token, bool debug_on = false, int max_num_retry = 3);
+    Spotify(const char* client_id, const char* client_secret, const char* refresh_token, int server_port = 80, bool debug_on = false, int max_num_retry = 3);
+    ~Spotify();
     /// @brief start the server and begin authentication
     void begin();
     /// @brief handle client requests necessary for authentication
@@ -675,6 +684,11 @@ class Spotify {
     /// @param uri char array to store URI
     /// @return URI as pointer to char array
     char* convert_id_to_uri(char* id, char* type, char* uri); 
+    /// @brief Get the users Tokens
+    /// @return a user_tokens object containig the id, secret and refresh_token
+    user_tokens get_user_tokens();
+    /// @brief Destroy Object and free used memory
+    void end();
 
   private:
     WebServer _server;
@@ -688,6 +702,8 @@ class Spotify {
     static const int _size_of_uri = 45;
     /// @brief Size of an id
     static const int _size_of_id = 25;
+    /// @brief True if credentials will be set during runtime
+    bool _no_credentials = false;
     /// @brief Maximum number of items in one request
     int _max_num_retry = 3;
     /// @brief Users set redirect uri
@@ -697,9 +713,9 @@ class Spotify {
     /// @brief user auth code
     char _auth_code[800] = "";
     /// @brief Users set client id
-    const char* _client_id;
+    char _client_id[100] = "";
     /// @brief Users set client secret
-    const char* _client_secret;
+    char _client_secret[100] = "";
     /// @brief Current number of retries
     int _retry;
     /// @brief Debug mode
@@ -710,10 +726,18 @@ class Spotify {
     String  _access_token; 
     /// @brief Root login Page
     void server_on_root();
+    /// @brief Response from login page
+    void server_on_response();
+    /// @brief Refresh token login Page
+    void server_on_refresh();
     /// @brief Get refresh token from auth code
     bool get_refresh_token();
-    /// @brief Currying function for callback_login_page
-    friend std::function<void()> callback_fn(Spotify *spotify);
+    /// @brief Currying function for refresh login page
+    friend std::function<void()> callback_fn_refresh(Spotify *spotify);
+    /// @brief Currying function for root login page
+    friend std::function<void()> callback_fn_root(Spotify *spotify);
+    /// @brief Currying function for root login page response
+    friend std::function<void()> callback_fn_response(Spotify *spotify);
     /// @brief Get Access Token with refresh token
     /// @return Bool if token was successfully retrieved
     bool get_token();
@@ -759,7 +783,8 @@ class Spotify {
     /// @param data Array to store result
     /// @param data_size Size of data array
     /// @return Pointer to data array
-    void array_to_json_array(int size,  char** array, char* data, int data_size = _max_char_size);//Convert array of chars to one json array
+    void array_to_json_array(int size,  char** array, char* data, int data_size = _max_char_size);
+    void server_routes();
   #ifdef ENABLE_TRACKS
     /// @brief Check if recommendation value is valid
     /// @param param Float value to check
@@ -812,7 +837,24 @@ class Spotify {
     "chDYABPPTHPbqjc1qCmBaZx2vN4Ye5DUys/vZwP9BFohFrH/6j/f3IL16/RZkiMN\n"\
     "JCqVJUzKoZHm1Lesh3Sz8W2jmdv51b2EQJ8HmA==\n"\
     "-----END CERTIFICATE-----\n";
-
+    const char* _credentials_input PROGMEM = R"=====(
+    <HTML>
+        <HEAD>
+            <TITLE>Enter Credentials</TITLE>
+        </HEAD>
+        <BODY>
+            <h1>Enter your Credentials</h1>
+            <p>If you don't have a refresh token leave empty</p>
+            <form action="/get">
+                Client ID: <input type="text" name="id">
+                <p></p>
+                Client Secret: <input type="text" name="secret">
+                <p></p>
+                Refreshtoken: <input type="text" name="token">
+                <input type="submit" value="Submit">
+            </form>
+        </BODY>
+    </HTML>)=====";
     const char* _login_page PROGMEM = R"=====(
     <HTML>
       <HEAD>

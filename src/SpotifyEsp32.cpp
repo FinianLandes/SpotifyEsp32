@@ -25,12 +25,18 @@ namespace Spotify_types {
   char* FOLLOW_TYPE_USER = "user";
   int SIZE_OF_ID = 40;
   int SIZE_OF_URI = 50;
+  int SIZE_OF_SECRET_ID = 100;
+  int SIZE_OF_REFRESH_TOKEN = 300;
 }
 
-Spotify::Spotify(const char* client_id,const char* client_secret,int server_port, bool debug_on, int max_num_retry): _server(server_port){
+Spotify::Spotify(const char* client_id, const char* client_secret, int server_port, bool debug_on, int max_num_retry):_server(server_port){
   _retry = 0;
-  _client_id = client_id;
-  _client_secret = client_secret;
+  if(!(client_id && client_secret)){
+    _no_credentials = true;
+  }else{
+    strncpy(_client_id, client_id,sizeof(client_id));
+    strncpy(_client_secret, client_secret,sizeof(client_secret));
+  }
   _port = server_port;
   _debug_on = debug_on;
   if(max_num_retry>0){
@@ -41,26 +47,43 @@ Spotify::Spotify(const char* client_id,const char* client_secret,int server_port
   }
 }
 
-Spotify::Spotify(const char* client_id,const char* client_secret,const char* refresh_token, bool debug_on, int max_num_retry)
-{
-  _port = 80;
+Spotify::Spotify(const char* client_id, const char* client_secret, const char* refresh_token, int server_port,bool debug_on, int max_num_retry):_server(server_port){
   _retry = 0;
-  _client_id = client_id;
-  _client_secret = client_secret;
-  strncpy(_refresh_token, refresh_token,sizeof(_refresh_token));
+  if(!(client_id && client_secret && refresh_token)){
+    _no_credentials = true;
+  }else{
+    strncpy(_client_id, client_id,sizeof(client_id));
+    strncpy(_client_secret, client_secret,sizeof(client_secret));
+    strncpy(_refresh_token, refresh_token,sizeof(_refresh_token));
+  }
   _debug_on = debug_on;
-  if(max_num_retry>0){
+  if(max_num_retry > 0){
     _max_num_retry = max_num_retry;
   }
   else{
     _max_num_retry = 1;
   }
 }
-
+Spotify::~Spotify(){
+  if(_debug_on){
+    Serial.println("Object Destructed");
+  }
+}
 //Login Webserver Functions
-std::function<void()> callback_fn(Spotify *spotify) {
+
+std::function<void()> callback_fn_refresh(Spotify *spotify) {
+  return [spotify]() {
+        return spotify->server_on_refresh();
+    };
+};
+std::function<void()> callback_fn_root(Spotify *spotify) {
   return [spotify]() {
         return spotify->server_on_root();
+    };
+};
+std::function<void()> callback_fn_response(Spotify *spotify) {
+  return [spotify]() {
+        return spotify->server_on_response();
     };
 };
 bool Spotify::get_refresh_token() {
@@ -73,7 +96,7 @@ bool Spotify::get_refresh_token() {
   authorization.trim();
   authorization = "Basic " + base64::encode(authorization);
 
-  String payload = "grant_type=authorization_code&code=" + String(_auth_code) + "&redirect_uri=" + String(_redirect_uri);
+  String payload = "grant_type=authorization_code&code=" + String(_auth_code) + "&redirect_uri=" + String(_redirect_uri)+ "callback";
 
   _client.println("POST /api/token HTTP/1.1");
   _client.println("Host: accounts.spotify.com");
@@ -121,12 +144,43 @@ bool Spotify::get_refresh_token() {
   _client.stop();
   return reply;
 }
-
 void Spotify::server_on_root() {
-  if (strcmp(_refresh_token, "") == 0) {
+  if((strcmp(_client_id, "") == 0 || !_client_id || strcmp(_client_secret, "") == 0 || !_client_secret)){
+    _server.send(200,"text/html", String(_credentials_input));
+  }else{
+    _server.sendHeader("Location", String(_redirect_uri)+"callback");
+    _server.send(302, "text/plain", "");
+  }
+}
+void Spotify::server_on_response(){
+  if(_server.args() != 0){
+    if(_server.hasArg("id")){
+      strncpy(_client_id, _server.arg("id").c_str(), sizeof(_client_id));
+    }
+    if(_server.hasArg("secret")){
+      strncpy(_client_secret, _server.arg("secret").c_str(), sizeof(_client_secret));
+    }
+    if(_server.hasArg("token")){
+      strncpy(_refresh_token, _server.arg("token").c_str(), sizeof(_refresh_token));
+    }
+    if (strcmp(_refresh_token, "") != 0) {
+      _server.send(200, "text/html", "Credentials successfully set!");
+      _server.stop();
+    } else if (strcmp(_refresh_token, "") == 0) {
+      _server.sendHeader("Location", String(_redirect_uri)+"callback");
+      _server.send(302, "text/plain", "");
+    }
+  }else{
+    _server.send(200, "test/html", "Something went wrong, please try again");
+  }
+}
+void Spotify::server_on_refresh() {
+  if (strcmp(_refresh_token, "") == 0 || !_refresh_token) {
     if (_server.args() == 0) {
       char page[900];
-      snprintf(page,sizeof(page),_login_page, _client_id, _redirect_uri);
+      char redirect_callback[150];
+      snprintf(redirect_callback, sizeof(redirect_callback),"%scallback", _redirect_uri);
+      snprintf(page,sizeof(page),_login_page, _client_id, redirect_callback);
       _server.send(200, "text/html", String(page));
     } else {
       if (_server.hasArg("code")) {
@@ -154,43 +208,56 @@ void Spotify::server_on_root() {
     _server.stop();
   }
 }
-
-void Spotify::begin(){
-  _client.setCACert(_spotify_root_ca);
-  if(strcmp(_refresh_token, "") == 0){
-    if(_port == 80){
-      snprintf(_redirect_uri,sizeof(_redirect_uri), "http://%s/", WiFi.localIP().toString().c_str());
-      Serial.printf("Go to this url in your Browser to login to spotify: %s\n", _redirect_uri);
-    }
-    else{
-      snprintf(_redirect_uri,sizeof(_redirect_uri), "http://%s:%d/", WiFi.localIP().toString().c_str(), _port);
-      Serial.printf("Go to this url in your Browser to login to spotify: %s\n", _redirect_uri);
-    }
-    _server.on("/", HTTP_GET, [this](){
-      if(_debug_on){
-        Serial.println("Send response to Root");
-      }
-      auto root = callback_fn(this);
-      root();
-    });
-    _server.begin();
+void Spotify::server_routes(){
+  _server.on("/", HTTP_GET, [this](){
     if(_debug_on){
-      Serial.println("Server started");
+      Serial.println("Send response to root");
     }
-  }
-  else{
+    auto root = callback_fn_root(this);
+    root();
+  });
+  _server.on("/callback", HTTP_GET, [this](){
     if(_debug_on){
-      Serial.println("Refresh token already set");
+      Serial.println("Send response to Callback");
     }
+    auto refresh = callback_fn_refresh(this);
+    refresh();
+  });
+  
+  _server.on("/get", HTTP_GET, [this](){
+    if(_debug_on){
+      Serial.println("Receive credentials from root");
+    }
+    auto response = callback_fn_response(this);
+    response();
+  });
+  _server.begin();
+  if(_debug_on){
+    Serial.println("Server started");
   }
 }
+void Spotify::begin(){ 
+  if(_port == 80){
+    snprintf(_redirect_uri,sizeof(_redirect_uri), "http://%s/", WiFi.localIP().toString().c_str());
+    Serial.printf("Go to this url in your Browser to login to spotify or enter your credentials: %s\n", _redirect_uri);
+  }
+  else{
+    snprintf(_redirect_uri,sizeof(_redirect_uri), "http://%s:%d/", WiFi.localIP().toString().c_str(), _port);
+    Serial.printf("Go to this url in your Browser to login to spotify or enter your credentials: %s\n", _redirect_uri);
+  }
+  _client.setCACert(_spotify_root_ca);
+  server_routes();
+}
 
+void Spotify::end(){
+  delete this;
+}
 void Spotify::handle_client(){
   _server.handleClient(); 
 }
 
 bool Spotify::is_auth(){
-  return strcmp(_refresh_token, "") != 0;
+  return !(strcmp(_refresh_token, "") == 0 || !_refresh_token || strcmp(_client_id, "") == 0 || !_client_id || strcmp(_client_secret, "") == 0 || !_client_secret) ;
 }
 
 //Basic functions
@@ -1488,7 +1555,14 @@ char* Spotify::convert_id_to_uri(char* id, char* type,char * uri){
   snprintf(uri,sizeof(uri), "spotify:%s:%s", type, id);
   return uri;
 }
+user_tokens Spotify::get_user_tokens(){
+  user_tokens tokens;
+  tokens.client_id = strdup(_client_id);
+  tokens.client_secret = strdup(_client_secret);
+  tokens.refresh_token = strdup(_refresh_token);
+  return tokens;
+}
 void print_response(response response_obj){
   Serial.printf("Status: %d\n", response_obj.status_code);
   Serial.printf("Reply: %s\n", response_obj.reply.c_str());
-} 
+}

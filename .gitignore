@@ -1,3 +1,13 @@
 Spotify_v3
 Spotify_Esp32_test.ino
 Spotify_Esp32.code-workspace
+TODO.txt
+.pio
+.vscode
+platformio.ini
+src/main.cpp
+partitions.csv
+src/SpotifyEsp32Web.cpp
+src/SpotifyEsp32Web.h
+src/src.ino
+sdkconfig.esp32doit-devkit-v1
