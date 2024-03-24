@@ -84,7 +84,7 @@ To print the response you can use the ```print_response(response_obj)``` functio
     char* convert_id_to_uri(char* id, char* type, char* uri); 
 ```
 - You can also include the namespace: ```using namespace Spotify_types;```. These are some types used in the library eg. TYPES, SIZES of uris/ids </br>
-# Other Functions
+### Other Functions
 If you want to get the tokens which you set during runtime to save them and reuse them you can call the ```get_user_tokens()``` function, this function returns a ```user_tokens``` object which contains: ```client_id```,```client_secret``` and the ````refresh_token```. </br>
 ## Useful Information
 Due to the Wifi and HTTPS this library is quite big, so i recommend setting the partitions table of your esp to use more than the default 1.2MB of flash as most esp32's have 4MB of which the biggest part is set for SPIFFS which in most cases isn't used. Here are some tutorials about setting the partitions table of your esp: </br>
