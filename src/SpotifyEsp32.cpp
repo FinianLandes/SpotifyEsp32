@@ -34,8 +34,8 @@ Spotify::Spotify(const char* client_id, const char* client_secret, int server_po
   if(!(client_id && client_secret)){
     _no_credentials = true;
   }else{
-    strncpy(_client_id, client_id,sizeof(client_id));
-    strncpy(_client_secret, client_secret,sizeof(client_secret));
+    strncpy(_client_id, client_id,sizeof(_client_id));
+    strncpy(_client_secret, client_secret,sizeof(_client_secret));
   }
   _port = server_port;
   _debug_on = debug_on;
@@ -52,8 +52,8 @@ Spotify::Spotify(const char* client_id, const char* client_secret, const char* r
   if(!(client_id && client_secret && refresh_token)){
     _no_credentials = true;
   }else{
-    strncpy(_client_id, client_id,sizeof(client_id));
-    strncpy(_client_secret, client_secret,sizeof(client_secret));
+    strncpy(_client_id, client_id,sizeof(_client_id));
+    strncpy(_client_secret, client_secret,sizeof(_client_secret));
     strncpy(_refresh_token, refresh_token,sizeof(_refresh_token));
   }
   _debug_on = debug_on;
