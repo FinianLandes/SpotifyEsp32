@@ -14,7 +14,7 @@ This library is a wrapper for the [Spotify Web API](https://developer.spotify.co
 ```c++
 #include <Arduino.h>
 #include <WiFi.h>
-#include "SpotifyESP32.h"
+#include "SpotifyEsp32.h"
 
 const char* SSID = "your_ssid";
 const char* PASSWORD = "your_password";

@@ -11,7 +11,7 @@
 // Include the required libraries
 #include <Arduino.h>
 #include <WiFi.h>
-#include <SpotifyESP32.h>
+#include <SpotifyEsp32.h>
 
 char* SSID = "YOUR WIFI SSID";
 const char* PASSWORD = "YOUR WIFI PASSWORD";
