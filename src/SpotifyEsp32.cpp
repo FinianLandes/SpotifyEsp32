@@ -247,7 +247,9 @@ void Spotify::begin(){
     Serial.printf("Go to this url in your Browser to login to spotify or enter your credentials: %s\n", _redirect_uri);
   }
   _client.setCACert(_spotify_root_ca);
-  server_routes();
+  if(!is_auth()){
+    server_routes();
+  }
 }
 
 void Spotify::end(){
