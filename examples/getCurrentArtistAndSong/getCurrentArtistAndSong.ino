@@ -15,7 +15,7 @@ In this example your current track will be printed to the serial and as soon as 
 // Include the required libraries
 #include <Arduino.h>
 #include <WiFi.h>
-#include <SpotifyESP32.h>
+#include <SpotifyEsp32.h>
 
 char* SSID = "YOUR WIFI SSID";
 const char* PASSWORD = "YOUR WIFI PASSWORD";
