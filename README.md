@@ -1,5 +1,6 @@
 # Spotify Library for ESP32 
 This library is a wrapper for the [Spotify Web API](https://developer.spotify.com/documentation/web-api/) and is designed to work with the [ESP32](https://www.espressif.com/en/products/socs/esp32/overview) microcontroller. 
+
 ## Dependencies
 - [ArduinoJson](https://arduinojson.org/) </br>
 - [WebServer](https://github.com/espressif/arduino-esp32/blob/master/libraries/WebServer/src/WebServer.h) </br>
@@ -9,6 +10,7 @@ This library is a wrapper for the [Spotify Web API](https://developer.spotify.co
 - [base64](https://github.com/Densaugeo/base64_arduino) </br>
 
 ## Setup
+[Youtube Tutorial for the setup](https://www.youtube.com/watch?v=xNjbRq59dlc)</br>
 1. Create a new application on the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications) and copy the Client ID and Client Secret into your code. Leave the developer dashboard open as you will need to set the callback url later. </br>
 2. Now you will have to use the login without a refresh token which can be implemented the following way:
 ```c++
