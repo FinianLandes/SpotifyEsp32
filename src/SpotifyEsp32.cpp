@@ -57,6 +57,7 @@ Spotify::Spotify(const char* client_id, const char* client_secret, const char* r
     strncpy(_refresh_token, refresh_token,sizeof(_refresh_token));
   }
   _debug_on = debug_on;
+  _port = server_port;
   if(max_num_retry > 0){
     _max_num_retry = max_num_retry;
   }
