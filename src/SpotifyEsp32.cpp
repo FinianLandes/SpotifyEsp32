@@ -316,7 +316,7 @@ bool Spotify::get_refresh_token() {
   JsonDocument response = process_response(filter, http_code);
   if(!response.isNull()){
     reply = true;
-    strncpy(_access_token, response["refresh_token"].as<const char*>(), sizeof(_access_token));
+    strncpy(_refresh_token, response["refresh_token"].as<const char*>(), sizeof(_refresh_token));
   }
   if (_debug_on) {
     Serial.printf("POST \"Refresh token\" Status: %d \n", http_code);
