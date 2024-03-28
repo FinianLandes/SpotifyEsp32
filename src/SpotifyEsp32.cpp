@@ -1424,7 +1424,7 @@ String Spotify::current_track_name(){
   JsonDocument filter;
   filter["item"]["name"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     track_name = data.reply["item"]["name"].as<String>();
   }
   return track_name;
@@ -1434,7 +1434,7 @@ String Spotify::current_track_id(){
   JsonDocument filter;
   filter["item"]["id"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     track_id = data.reply["item"]["id"].as<String>();
   }
   return track_id;
@@ -1447,7 +1447,7 @@ String Spotify::current_device_id(){
   obj["id"] = true;
   obj["is_active"] = true;
   response data = available_devices(filter);
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     JsonArray devices = data.reply["devices"].as<JsonArray>();
     for (JsonVariant device : devices) {
       JsonObject deviceObj = device.as<JsonObject>();
@@ -1464,7 +1464,7 @@ String Spotify::current_artist_names(){
   JsonDocument filter;
   filter["item"]["artists"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     JsonArray array = data.reply["item"]["artists"];
     int len = array.size();
     artist_names = "";
@@ -1485,7 +1485,7 @@ char* Spotify::current_device_id(char * device_id){
   obj["id"] = true;
   obj["is_active"] = true;
   response data = available_devices(filter);
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     JsonArray devices = data.reply["devices"].as<JsonArray>();
     for (JsonVariant device : devices) {
       JsonObject deviceObj = device.as<JsonObject>();
@@ -1501,7 +1501,7 @@ char* Spotify::current_track_name(char * track_name){
   JsonDocument filter;
   filter["item"]["name"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     strcpy(track_name, data.reply["item"]["name"].as<String>().c_str());
   }
   return track_name;
@@ -1510,7 +1510,7 @@ char* Spotify::current_track_id(char * track_id){
   JsonDocument filter;
   filter["item"]["id"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     strcpy(track_id, data.reply["item"]["id"].as<String>().c_str());
   }
   return track_id;
@@ -1519,7 +1519,7 @@ char* Spotify::current_artist_names(char * artist_names){
   JsonDocument filter;
   filter["item"]["artists"] = true;
   response data = currently_playing();
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     JsonArray array = data.reply["item"]["artists"];
     int len = array.size();
     artist_names[0] = '\0';
@@ -1537,7 +1537,7 @@ bool Spotify::is_playing(){
   JsonDocument filter;
   filter["is_playing"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     is_playing = data.reply["is_playing"].as<bool>();
   }
   return is_playing;
@@ -1547,7 +1547,7 @@ bool Spotify::volume_modifyable(){
   JsonDocument filter;
   filter["device"]["supports_volume"] = true;
   response data = current_playback_state(filter);
-  if(is_valid_value(data.status_code)){
+  if(is_valid_value(data.status_code) && !data.reply.isNull()){
     volume_modifyable = data.reply["device"]["supports_volume"];
   }
   return volume_modifyable;
