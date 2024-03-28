@@ -205,7 +205,6 @@ void Spotify::handle_client(){
 bool Spotify::is_auth(){
   return !(strcmp(_refresh_token, "") == 0 || !_refresh_token || strcmp(_client_id, "") == 0 || !_client_id || strcmp(_client_secret, "") == 0 || !_client_secret);
 }
-
 //Basic functions
 response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* payload, JsonDocument filter){
   response response_obj;
@@ -1418,8 +1417,8 @@ response Spotify::check_if_users_follow_playlist(char* playlist_id,int size, cha
   return RestApiGet(url, filter);
 }
 #endif
-#ifdef ENABLE_SIMPIFIED
 //Simplified functions, formatting functions
+#ifdef ENABLE_SIMPIFIED
 String Spotify::current_track_name(){
   String track_name = "Something went wrong";
   JsonDocument filter;
