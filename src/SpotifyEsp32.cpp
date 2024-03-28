@@ -358,21 +358,22 @@ bool Spotify::valid_http_code(int code){
 
 int Spotify::process_headers(){
   int http_code = -1;
-  int line_num = 0;
   while (_client.connected()) {
     String line = _client.readStringUntil('\n');
-    if (line_num == 0) {
+    if (line.startsWith("HTTP")) {
       http_code = line.substring(9, 12).toInt();
     }
     if(_debug_on){
-      if (line_num == 0) {
+      if (line.startsWith("HTTP") || line.startsWith("Content-Length") || line.startsWith("Content-Type")){
         Serial.println(line);
       }
+    }else{
+      _client.readStringUntil('\n\r\n\r');
+      break;
     }
     if (line == "\r") {
       break;
     }
-    line_num++;
   }
   return http_code;
 }
