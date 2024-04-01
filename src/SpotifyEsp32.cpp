@@ -192,7 +192,7 @@ void Spotify::begin(){
     server_routes();
   }
   _client.setCACert(_spotify_root_ca);
-  _client.setTimeout(1500);
+  _client.setTimeout(10000);
 }
 
 void Spotify::end(){
@@ -250,10 +250,10 @@ response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* pa
   }
   
   if(_retry <= _max_num_retry && !valid_http_code(header_data.http_code)){
+    _client.stop();
     String message = response["error"]["message"].as<String>();
     _retry++;
     if(message == "Only valid bearer authentication supported"){
-      _client.stop();
       if(get_token()){
         return RestApi(rest_url, type, payload_size, payload, filter);
       }else{
@@ -264,6 +264,7 @@ response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* pa
       deserializeJson(response_obj.reply, response["error"]["message"].as<String>());
     }
   }else{
+    _client.stop();
     response_obj.reply = response;
   }
   
@@ -306,6 +307,7 @@ bool Spotify::get_refresh_token() {
   bool reply = false;
   String payload = "grant_type=authorization_code&code=" + String(_auth_code) + "&redirect_uri=" + String(_redirect_uri)+ "callback";
   if(!token_base_req(payload)){
+    _client.stop();
     return false;
   }
   header_resp header_data = process_headers();
@@ -330,6 +332,7 @@ bool Spotify::get_token() {
   bool reply = false;
   String payload = "grant_type=refresh_token&refresh_token=" + String(_refresh_token);
   if(!token_base_req(payload)){
+    _client.stop();
     return false;
   }
   header_resp header_data = process_headers();
@@ -1149,15 +1152,14 @@ response Spotify::get_tracks_audio_features(int size,char ** track_ids, JsonDocu
   return RestApiGet(url, filter);
 }
 response Spotify::get_track_audio_features(char* track_id, JsonDocument filter) {
-  char url[100];
+  char url[150];
   snprintf(url, sizeof(url), "https://api.spotify.com/v1/audio-features/%s", track_id);
 
   return RestApiGet(url, filter);
 }
 response Spotify::get_track_audio_analysis(char* track_id, JsonDocument filter) {
-  char url[100];
+  char url[150];
   snprintf(url, sizeof(url), "https://api.spotify.com/v1/audio-analysis/%s", track_id);
-
   return RestApiGet(url, filter);
 }
 response Spotify::get_recommendations(recommendations& recom, int limit, JsonDocument filter){
