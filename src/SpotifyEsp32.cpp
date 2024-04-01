@@ -208,7 +208,6 @@ bool Spotify::is_auth(){
 //Basic functions
 response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* payload, JsonDocument filter){
   response response_obj;
-  int http_code = -1;
   init_response(&response_obj);
 
   if (!_client.connect(_host, 443)) {
@@ -240,20 +239,21 @@ response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* pa
     _client.println();
     _client.println(payload);
   }
-  http_code = process_headers();
-  JsonDocument response = process_response(filter, http_code);
+  header_resp header_data = process_headers();
+  JsonDocument response = process_response(header_data, filter);
   
   if(_debug_on){
-    Serial.printf("%s \"%s\" Status: %i\n", type, extract_endpoint(rest_url).c_str(), http_code);
+    Serial.printf("%s \"%s\" Status: %i\n", type, extract_endpoint(rest_url).c_str(), header_data.http_code);
     Serial.print("Reply: ");
     serializeJson(response, Serial);
     Serial.println();
   }
   
-  if(_retry <= _max_num_retry && !valid_http_code(http_code)){
+  if(_retry <= _max_num_retry && !valid_http_code(header_data.http_code)){
     String message = response["error"]["message"].as<String>();
     _retry++;
     if(message == "Only valid bearer authentication supported"){
+      _client.stop();
       if(get_token()){
         return RestApi(rest_url, type, payload_size, payload, filter);
       }else{
@@ -266,8 +266,8 @@ response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* pa
   }else{
     response_obj.reply = response;
   }
-  _client.stop();
-  response_obj.status_code = http_code;
+  
+  response_obj.status_code = header_data.http_code;
   return response_obj;
 }
 
@@ -291,7 +291,6 @@ bool Spotify::token_base_req(String payload){
   String authorization = String(_client_id) + ":" + String(_client_secret);
   authorization.trim();
   authorization = "Basic " + base64::encode(authorization);
-  
   _client.println("POST /api/token HTTP/1.1");
   _client.println("Host: accounts.spotify.com");
   _client.println("User-Agent: ESP32");
@@ -300,25 +299,26 @@ bool Spotify::token_base_req(String payload){
   _client.println("Authorization: " + authorization);
   _client.println("Content-Length: " + String(payload.length()));
   _client.println();
-  _client.println(payload);
+  _client.println(payload); 
   return true;
 }
 bool Spotify::get_refresh_token() {
   bool reply = false;
   String payload = "grant_type=authorization_code&code=" + String(_auth_code) + "&redirect_uri=" + String(_redirect_uri)+ "callback";
-  reply = token_base_req(payload);
-  Serial.print(reply);
-  int http_code = process_headers();
+  if(!token_base_req(payload)){
+    return false;
+  }
+  header_resp header_data = process_headers();
 
   JsonDocument filter;
   filter["refresh_token"] = true;
-  JsonDocument response = process_response(filter, http_code);
+  JsonDocument response = process_response(header_data, filter);
   if(!response.isNull()){
     reply = true;
     strncpy(_refresh_token, response["refresh_token"].as<const char*>(), sizeof(_refresh_token));
   }
   if (_debug_on) {
-    Serial.printf("POST \"Refresh token\" Status: %d \n", http_code);
+    Serial.printf("POST \"refresh token\" Status: %d \n", header_data.http_code);
     Serial.print("Reply: ");
     serializeJson(response, Serial);
     Serial.println();
@@ -328,21 +328,20 @@ bool Spotify::get_refresh_token() {
 }
 bool Spotify::get_token() {
   bool reply = false;
-
   String payload = "grant_type=refresh_token&refresh_token=" + String(_refresh_token);
-  reply = token_base_req(payload);
-
-  int http_code = process_headers();
-  
+  if(!token_base_req(payload)){
+    return false;
+  }
+  header_resp header_data = process_headers();
   JsonDocument filter;
   filter["access_token"] = true;
-  JsonDocument response = process_response(filter, http_code);
+  JsonDocument response = process_response(header_data, filter);
   if(!response.isNull()){
     reply = true;
     strncpy(_access_token, response["access_token"].as<const char*>(), sizeof(_access_token));
   }
   if (_debug_on) {
-    Serial.printf("POST \"token\" Status: %d \n", http_code);
+    Serial.printf("POST \"acces token\" Status: %d \n", header_data.http_code);
     Serial.print("Reply: ");
     serializeJson(response, Serial);
     Serial.println();
@@ -355,12 +354,19 @@ bool Spotify::valid_http_code(int code){
   return (code >= 200 && code <= 299);
 }
 
-int Spotify::process_headers(){
-  int http_code = -1;
+header_resp Spotify::process_headers(){
+  header_resp response;
+  response.http_code = -1;
+  response.content_length = 0;
+  bool can_break = false;
   while (_client.connected()) {
     String line = _client.readStringUntil('\n');
     if (line.startsWith("HTTP")) {
-      http_code = line.substring(9, 12).toInt();
+      response.http_code = line.substring(9, 12).toInt();
+    }
+    if (line.startsWith("Content-Length")) {
+      response.content_length = line.substring(16).toInt();
+      can_break = true;
     }
     if(_debug_on){
       if (line.startsWith("HTTP") || line.startsWith("Content-Length") || line.startsWith("Content-Type")){
@@ -374,36 +380,28 @@ int Spotify::process_headers(){
       break;
     }
   }
-  return http_code;
-}
-JsonDocument Spotify::process_response(JsonDocument filter, int http_code){
-  JsonDocument response;
-  bool data_read;
-  do {
-    data_read = false;
-    while(_client.available()){
-      data_read = true;
-      _retry = 0;
-      if(_debug_on){
-        Serial.printf("Filter: %s\n", filter.isNull() ? "Off" : "On");
-      }
-      if (filter.isNull() || !valid_http_code(http_code)) {
-        DeserializationError error = deserializeJson(response, _client);
-        if (error && _debug_on) {
-          Serial.printf("Deserialization error: %s\n", error.c_str());
-        }
-      } else if(!filter.isNull()) {
-        DeserializationError error = deserializeJson(response, _client, DeserializationOption::Filter(filter));
-        if (error && _debug_on) {
-          Serial.printf("Deserialization error: %s\n", error.c_str());
-        }
-      }
-      break;
-    }
-  } while (_client.available() || (data_read && _client.available()));
+
   return response;
 }
 
+JsonDocument Spotify::process_response(header_resp header_data, JsonDocument filter){
+  JsonDocument response;
+  size_t recv_bytes = 0;
+  if(_debug_on){
+    Serial.printf("Filter: %s\n", filter.isNull() ? "Off" : "On");
+  }
+  while (recv_bytes < header_data.content_length){
+    recv_bytes += _client.available();
+    if (filter.isNull() || !valid_http_code(header_data.http_code)) {
+      deserializeJson(response, _client);
+      break;
+    } else if(!filter.isNull()) {
+      deserializeJson(response, _client, DeserializationOption::Filter(filter));
+      break;
+    }
+  }
+  return response;
+}
 void Spotify::init_response(response* response_obj){
   response_obj -> status_code = -1;
   deserializeJson(response_obj -> reply, "If you see this, something went wrong");
@@ -1424,7 +1422,7 @@ String Spotify::current_track_name(){
   JsonDocument filter;
   filter["item"]["name"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     track_name = data.reply["item"]["name"].as<String>();
   }
   return track_name;
@@ -1434,7 +1432,7 @@ String Spotify::current_track_id(){
   JsonDocument filter;
   filter["item"]["id"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     track_id = data.reply["item"]["id"].as<String>();
   }
   return track_id;
@@ -1447,7 +1445,7 @@ String Spotify::current_device_id(){
   obj["id"] = true;
   obj["is_active"] = true;
   response data = available_devices(filter);
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     JsonArray devices = data.reply["devices"].as<JsonArray>();
     for (JsonVariant device : devices) {
       JsonObject deviceObj = device.as<JsonObject>();
@@ -1464,7 +1462,7 @@ String Spotify::current_artist_names(){
   JsonDocument filter;
   filter["item"]["artists"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     JsonArray array = data.reply["item"]["artists"];
     int len = array.size();
     artist_names = "";
@@ -1485,7 +1483,7 @@ char* Spotify::current_device_id(char * device_id){
   obj["id"] = true;
   obj["is_active"] = true;
   response data = available_devices(filter);
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     JsonArray devices = data.reply["devices"].as<JsonArray>();
     for (JsonVariant device : devices) {
       JsonObject deviceObj = device.as<JsonObject>();
@@ -1501,7 +1499,7 @@ char* Spotify::current_track_name(char * track_name){
   JsonDocument filter;
   filter["item"]["name"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     strcpy(track_name, data.reply["item"]["name"].as<String>().c_str());
   }
   return track_name;
@@ -1510,7 +1508,7 @@ char* Spotify::current_track_id(char * track_id){
   JsonDocument filter;
   filter["item"]["id"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     strcpy(track_id, data.reply["item"]["id"].as<String>().c_str());
   }
   return track_id;
@@ -1519,7 +1517,7 @@ char* Spotify::current_artist_names(char * artist_names){
   JsonDocument filter;
   filter["item"]["artists"] = true;
   response data = currently_playing();
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     JsonArray array = data.reply["item"]["artists"];
     int len = array.size();
     artist_names[0] = '\0';
@@ -1537,7 +1535,7 @@ bool Spotify::is_playing(){
   JsonDocument filter;
   filter["is_playing"] = true;
   response data = currently_playing(filter);
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     is_playing = data.reply["is_playing"].as<bool>();
   }
   return is_playing;
@@ -1547,7 +1545,7 @@ bool Spotify::volume_modifyable(){
   JsonDocument filter;
   filter["device"]["supports_volume"] = true;
   response data = current_playback_state(filter);
-  if(is_valid_value(data.status_code) && !data.reply.isNull()){
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
     volume_modifyable = data.reply["device"]["supports_volume"];
   }
   return volume_modifyable;

@@ -73,6 +73,10 @@ typedef struct{
   const char* client_secret;
   const char* refresh_token;
 } user_tokens;
+typedef struct{
+  int http_code;
+  size_t content_length;
+} header_resp;
 /// @brief Recommendation object, used to create recommendations
 struct recommendations {
   char** seed_artists;
@@ -806,11 +810,11 @@ class Spotify {
     bool valid_http_code(int code);
     /// @brief Process headers of response
     /// @return Http code
-    int process_headers();
+    header_resp process_headers();
     /// @brief Process response
     /// @param filter Filter to apply to response
     /// @return JsonDocument containing response
-    JsonDocument process_response(JsonDocument filter = JsonDocument(),int http_code = -1);
+    JsonDocument process_response(header_resp header, JsonDocument filter = JsonDocument());
     /// @brief Initialize response object
     /// @param response_obj Response object to initialize
     void init_response(response* response_obj);
