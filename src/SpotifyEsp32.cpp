@@ -395,7 +395,6 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
   }
   while (recv_bytes < header_data.content_length){
     recv_bytes += _client.available();
-    Serial.printf("Received Bytes: %d\n", recv_bytes);
     if (filter.isNull() || !valid_http_code(header_data.http_code)) {
       DeserializationError err = deserializeJson(response, _client);
       if(err && _debug_on){
