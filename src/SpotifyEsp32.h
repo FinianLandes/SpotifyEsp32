@@ -21,7 +21,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
-#include <WebServer.h>
 #include <ArduinoJson.h>
 #include <UrlEncode.h>
 #include <base64.h>
@@ -29,6 +28,10 @@
 #include <functional>
 #include <map>
 #include <regex>
+
+#ifndef DISABLE_WEB_SERVER
+#include <WebServer.h>
+#endif
 
 
 
@@ -754,7 +757,27 @@ class Spotify {
     void end();
 
   private:
-    WebServer _server;
+  #ifndef DISABLE_WEB_SERVER
+    WebServer* _server;
+    /// @brief Root login Page
+    void server_on_root();
+    /// @brief Response from login page
+    void server_on_response();
+    /// @brief Refresh token login Page
+    void server_on_refresh();
+    /// @brief Get refresh token from auth code
+    bool get_refresh_token();
+    /// @brief Currying function for refresh login page
+    friend std::function<void()> callback_fn_refresh(Spotify *spotify);
+    /// @brief Currying function for root login page
+    friend std::function<void()> callback_fn_root(Spotify *spotify);
+    /// @brief Currying function for root login page response
+    friend std::function<void()> callback_fn_response(Spotify *spotify);
+    /// @brief Sets up server routes  
+    void server_routes();
+  #else
+    void* _server;
+  #endif
     WiFiClientSecure _client;
     const char* _host = "api.spotify.com";
     /// @brief Maximum number of items in one request
@@ -787,23 +810,12 @@ class Spotify {
     int _port;
     /// @brief Access token
     char  _access_token[400]; 
-    /// @brief Root login Page
-    void server_on_root();
-    /// @brief Response from login page
-    void server_on_response();
-    /// @brief Refresh token login Page
-    void server_on_refresh();
-    /// @brief Get refresh token from auth code
-    bool get_refresh_token();
-    /// @brief Currying function for refresh login page
-    friend std::function<void()> callback_fn_refresh(Spotify *spotify);
-    /// @brief Currying function for root login page
-    friend std::function<void()> callback_fn_root(Spotify *spotify);
-    /// @brief Currying function for root login page response
-    friend std::function<void()> callback_fn_response(Spotify *spotify);
     /// @brief Get Access Token with refresh token
     /// @return true if token was successfully retrieved
     bool get_token();
+    /// @brief Sends base headers for token request
+    /// @param payload Payload to send
+    /// @return true if request was successful
     bool token_base_req(String payload);
     /// @brief Checks if http code is valid
     /// @param code Http code to check
@@ -859,7 +871,7 @@ class Spotify {
     /// @param data_size Size of data array
     /// @return Pointer to data array
     void array_to_json_array(int size,  char** array, char* data, int data_size = _max_char_size);
-    void server_routes();
+    
   #ifdef ENABLE_TRACKS
     /// @brief Check if recommendation value is valid
     /// @param param Float value to check

@@ -29,7 +29,7 @@ namespace Spotify_types {
   int SIZE_OF_REFRESH_TOKEN = 300;
 }
 
-Spotify::Spotify(const char* client_id, const char* client_secret, int server_port, bool debug_on, int max_num_retry):_server(server_port){
+Spotify::Spotify(const char* client_id, const char* client_secret, int server_port, bool debug_on, int max_num_retry){
   _retry = 0;
   if(!(client_id && client_secret)){
     _no_credentials = true;
@@ -45,9 +45,14 @@ Spotify::Spotify(const char* client_id, const char* client_secret, int server_po
   else{
     _max_num_retry = 1;
   }
+  #ifndef DISABLE_WEB_SERVER
+  _server = new WebServer(server_port);
+  #else
+  _server = nullptr;
+  #endif
 }
 
-Spotify::Spotify(const char* client_id, const char* client_secret, const char* refresh_token, int server_port,bool debug_on, int max_num_retry):_server(server_port){
+Spotify::Spotify(const char* client_id, const char* client_secret, const char* refresh_token, int server_port,bool debug_on, int max_num_retry){
   _retry = 0;
   if(!(client_id && client_secret && refresh_token)){
     _no_credentials = true;
@@ -64,102 +69,113 @@ Spotify::Spotify(const char* client_id, const char* client_secret, const char* r
   else{
     _max_num_retry = 1;
   }
+  #ifndef DISABLE_WEB_SERVER
+  _server = new WebServer(server_port);
+  #else
+  _server = nullptr;
+  #endif
 }
 Spotify::~Spotify(){
+  #ifndef DISABLE_WEB_SERVER
+    delete _server;
+  #endif
   if(_debug_on){
     Serial.println("Object Destructed");
   }
 }
 //Login Webserver Functions
-
+#ifndef DISABLE_WEB_SERVER
 std::function<void()> callback_fn_refresh(Spotify *spotify) {
   return [spotify]() {
+        if(spotify->_server != nullptr)
         return spotify->server_on_refresh();
     };
 };
 std::function<void()> callback_fn_root(Spotify *spotify) {
   return [spotify]() {
+        if(spotify->_server != nullptr)
         return spotify->server_on_root();
     };
 };
 std::function<void()> callback_fn_response(Spotify *spotify) {
   return [spotify]() {
+        if(spotify->_server != nullptr)
         return spotify->server_on_response();
     };
 };
 void Spotify::server_on_root() {
   if((strcmp(_client_id, "") == 0 || !_client_id || strcmp(_client_secret, "") == 0 || !_client_secret)){
-    _server.send(200,"text/html", String(_credentials_input));
+    _server->send(200,"text/html", String(_credentials_input));
   }else{
-    _server.sendHeader("Location", String(_redirect_uri)+"callback");
-    _server.send(302, "text/plain", "");
+    _server->sendHeader("Location", String(_redirect_uri)+"callback");
+    _server->send(302, "text/plain", "");
   }
 }
 void Spotify::server_on_response(){
-  if(_server.args() != 0){
-    if(_server.hasArg("id")){
-      strncpy(_client_id, _server.arg("id").c_str(), sizeof(_client_id));
+  if(_server->args() != 0){
+    if(_server->hasArg("id")){
+      strncpy(_client_id, _server->arg("id").c_str(), sizeof(_client_id));
     }
-    if(_server.hasArg("secret")){
-      strncpy(_client_secret, _server.arg("secret").c_str(), sizeof(_client_secret));
+    if(_server->hasArg("secret")){
+      strncpy(_client_secret, _server->arg("secret").c_str(), sizeof(_client_secret));
     }
-    if(_server.hasArg("token")){
-      strncpy(_refresh_token, _server.arg("token").c_str(), sizeof(_refresh_token));
+    if(_server->hasArg("token")){
+      strncpy(_refresh_token, _server->arg("token").c_str(), sizeof(_refresh_token));
     }
     if (strcmp(_refresh_token, "") != 0) {
-      _server.send(200, "text/html", "Credentials successfully set!");
-      _server.stop();
+      _server->send(200, "text/html", "Credentials successfully set!");
+      _server->stop();
     } else if (strcmp(_refresh_token, "") == 0) {
-      _server.sendHeader("Location", String(_redirect_uri)+"callback");
-      _server.send(302, "text/plain", "");
+      _server->sendHeader("Location", String(_redirect_uri)+"callback");
+      _server->send(302, "text/plain", "");
     }
   }else{
-    _server.send(200, "test/html", "Something went wrong, please try again");
+    _server->send(200, "test/html", "Something went wrong, please try again");
   }
 }
 void Spotify::server_on_refresh() {
   if (strcmp(_refresh_token, "") == 0 || !_refresh_token) {
-    if (_server.args() == 0) {
+    if (_server->args() == 0) {
       char page[900];
       char redirect_callback[150];
       snprintf(redirect_callback, sizeof(redirect_callback),"%scallback", _redirect_uri);
       snprintf(page,sizeof(page),_login_page, _client_id, redirect_callback);
-      _server.send(200, "text/html", String(page));
+      _server->send(200, "text/html", String(page));
     } else {
-      if (_server.hasArg("code")) {
-        strncpy(_auth_code, _server.arg("code").c_str(), sizeof(_auth_code));
+      if (_server->hasArg("code")) {
+        strncpy(_auth_code, _server->arg("code").c_str(), sizeof(_auth_code));
         if(_debug_on){
           Serial.printf("Auth Code: %s\n", _auth_code);
         }
         if(get_refresh_token()){
           char message[500];
           snprintf(message,sizeof(message), "Setup Complete, Refresh Token: %s <br>You can now close this page", _refresh_token);
-          _server.send(200, "text/html", message);
+          _server->send(200, "text/html", message);
         }
         else{
-          _server.send(200, "text/html", "Something went wrong, please try again");
+          _server->send(200, "text/html", "Something went wrong, please try again");
         }
-        _server.stop();
+        _server->stop();
       } else {
         char page[900];
         snprintf(page,sizeof(page),_login_page, _client_id, _redirect_uri);
-        _server.send(200, "text/html", String(page));
+        _server->send(200, "text/html", String(page));
       }
     }
   } else {
-    _server.send(200, "text/html", "Spotify setup complete");
-    _server.stop();
+    _server->send(200, "text/html", "Spotify setup complete");
+    _server->stop();
   }
 }
 void Spotify::server_routes(){
-  _server.on("/", HTTP_GET, [this](){
+  _server->on("/", HTTP_GET, [this](){
     if(_debug_on){
       Serial.println("Send response to root");
     }
     auto root = callback_fn_root(this);
     root();
   });
-  _server.on("/callback", HTTP_GET, [this](){
+  _server->on("/callback", HTTP_GET, [this](){
     if(_debug_on){
       Serial.println("Send response to Callback");
     }
@@ -167,19 +183,21 @@ void Spotify::server_routes(){
     refresh();
   });
   
-  _server.on("/get", HTTP_GET, [this](){
+  _server->on("/get", HTTP_GET, [this](){
     if(_debug_on){
       Serial.println("Receive credentials from root");
     }
     auto response = callback_fn_response(this);
     response();
   });
-  _server.begin();
+  _server->begin();
   if(_debug_on){
     Serial.println("Server started");
   }
 }
+#endif
 void Spotify::begin(){ 
+  #ifndef DISABLE_WEB_SERVER
   if(!is_auth()){
     if(_port == 80){
       snprintf(_redirect_uri,sizeof(_redirect_uri), "http://%s/", WiFi.localIP().toString().c_str());
@@ -191,17 +209,20 @@ void Spotify::begin(){
     }
     server_routes();
   }
+  #endif
   _client.setCACert(_spotify_root_ca);
   _client.setTimeout(10000);
 }
 
+
+void Spotify::handle_client(){
+  #ifndef DISABLE_WEB_SERVER
+  _server->handleClient(); 
+  #endif
+}
 void Spotify::end(){
   delete this;
 }
-void Spotify::handle_client(){
-  _server.handleClient(); 
-}
-
 bool Spotify::is_auth(){
   return !(strcmp(_refresh_token, "") == 0 || !_refresh_token || strcmp(_client_id, "") == 0 || !_client_id || strcmp(_client_secret, "") == 0 || !_client_secret);
 }
