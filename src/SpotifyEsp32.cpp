@@ -376,6 +376,9 @@ header_resp Spotify::process_headers(){
       if (line.startsWith("HTTP") || line.startsWith("Content-Length") || line.startsWith("Content-Type")){
         Serial.println(line);
       }
+    }else if(can_break){
+      _client.find("\r\n\r\n");
+      break;
     }
     if (line == "\r") {
       break;
