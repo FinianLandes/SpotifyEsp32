@@ -32,7 +32,6 @@
 
 
 
-
 namespace Spotify_types {
   extern bool SHUFFLE_ON;
   extern bool SHUFFLE_OFF;
@@ -67,13 +66,18 @@ namespace Spotify_types {
 /// @brief Response object containing http status code and reply
 typedef struct{
   int status_code;
-  String reply;
+  JsonDocument reply;
 } response;
 typedef struct{
   const char* client_id;
   const char* client_secret;
   const char* refresh_token;
 } user_tokens;
+typedef struct{
+  int http_code;
+  size_t content_length;
+  String content_type;
+} header_resp;
 /// @brief Recommendation object, used to create recommendations
 struct recommendations {
   char** seed_artists;
@@ -131,21 +135,21 @@ struct recommendations {
 void print_response(response response_obj);
 class Spotify {
   public:
-    ///@brief Constructor for Spotify object without refresh token
-    ///@param client_id Client id from Spotify, if you want to set it during runtime provide an empty char* with enough space 
-    ///@param client_secret Client secret from Spotify, if you want to set it during runtime provide an empty char* with enough space 
-    ///@param server_port Port for the server to run on(default 80, if 80 is already used use anything above 1024)
-    ///@param debug_on Debug mode on or off(default off)
-    ///@param max_num_retry Max number of retries for a request(default 3)
+    /// @brief Constructor for Spotify object without refresh token
+    /// @param client_id Client id from Spotify, if you want to set it during runtime provide an empty char* with enough space 
+    /// @param client_secret Client secret from Spotify, if you want to set it during runtime provide an empty char* with enough space 
+    /// @param server_port Port for the server to run on(default 80, if 80 is already used use anything above 1024)
+    /// @param debug_on Debug mode on or off(default off)
+    /// @param max_num_retry Max number of retries for a request(default 3)
     Spotify(const char* client_id, const char* client_secret, int server_port = 80, bool debug_on = false, int max_num_retry = 3);
-    ///@brief Constructor for Spotify object with refresh token
-    ///@param server Your WebServer
-    ///@param client_id Client id from Spotify, if you want to set it during runtime provide an empty char* with enough space 
-    ///@param client_secret Client secret from Spotify,if you want to set it during runtime provide an empty char* with enough space 
-    ///@param refresh_token Refresh token from Spotify, if you want to set it during runtime provide an empty char* with enough space 
-    ///@param server_port Port for the server to run on(default 80, if 80 is already used use anything above 1024)
-    ///@param debug_on Debug mode on or off(default off)
-    ///@param max_num_retry Max number of retries for a request(default 3)
+    /// @brief Constructor for Spotify object with refresh token
+    /// @param server Your WebServer
+    /// @param client_id Client id from Spotify, if you want to set it during runtime provide an empty char* with enough space 
+    /// @param client_secret Client secret from Spotify,if you want to set it during runtime provide an empty char* with enough space 
+    /// @param refresh_token Refresh token from Spotify, if you want to set it during runtime provide an empty char* with enough space 
+    /// @param server_port Port for the server to run on(default 80, if 80 is already used use anything above 1024)
+    /// @param debug_on Debug mode on or off(default off)
+    /// @param max_num_retry Max number of retries for a request(default 3)
     Spotify(const char* client_id, const char* client_secret, const char* refresh_token, int server_port = 80, bool debug_on = false, int max_num_retry = 3);
     ~Spotify();
     /// @brief start the server and begin authentication
@@ -156,162 +160,183 @@ class Spotify {
     /// @return true if user is authenticated
     bool is_auth();
   #ifdef ENABLE_PLAYER
-    ///@brief Get information about the user's current playback state, including track, track progress, and active device.
-    ///@return response object containing http status code and reply
-    response currently_playing();
-    ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. 
-    ///@param context_uri Spotify URI of the context to play (Required)
-    ///@param offset Indicates from where in the context playback should start, Only works with albums or Playlists. NEEDS TO BE SET (0) IF ONLY URI IS PROVIDED
-    ///@param position_ms Indicates from what position in the context playback should start in milliseconds(Optional)
-    ///@param device_id Id of the device this command is targeting (Optional)
-    ///@return response object containing http status code and reply
+    /// @brief Get information about the user's current playback state, including track, track progress, and active device.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response currently_playing(JsonDocument filter = JsonDocument());
+    /// @brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. 
+    /// @param context_uri Spotify URI of the context to play (Required)
+    /// @param offset Indicates from where in the context playback should start, Only works with albums or Playlists. NEEDS TO BE SET (0) IF ONLY URI IS PROVIDED
+    /// @param position_ms Indicates from what position in the context playback should start in milliseconds(Optional)
+    /// @param device_id Id of the device this command is targeting (Optional)
+    /// @return response object containing http status code and reply
     response start_resume_playback(char* context_uri, int offset, int position_ms = 0, char* device_id = nullptr);
-    ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. 
-    ///@param size Number of uris in uris array
-    ///@param uris Array of Spotify URIs of the tracks to play
-    ///@param device_id Id of the device this command is targeting (Optional)
-    ///@return response object containing http status code and reply
+    /// @brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. 
+    /// @param size Number of uris in uris array
+    /// @param uris Array of Spotify URIs of the tracks to play
+    /// @param device_id Id of the device this command is targeting (Optional)
+    /// @return response object containing http status code and reply
     response start_resume_playback(int size, char ** uris ,char* device_id = nullptr);
-    ///@brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. Targets the currently playing context.
-    ///@return response object containing http status code and reply
+    /// @brief Start or resume playback. If no device_id is provided, the user's currently active device is the target. Targets the currently playing context.
+    /// @return response object containing http status code and reply
     response start_resume_playback(char* device_id = nullptr);
-    ///@brief Pause playback on Spotify
-    ///@return response object containing http status code and reply
+    /// @brief Pause playback on Spotify
+    /// @return response object containing http status code and reply
     response pause_playback();
-    ///@brief Skip to next track
-    ///@return response object containing http status code and reply
+    /// @brief Skip to next track
+    /// @return response object containing http status code and reply
     response skip();
-    ///@brief Skip to previous track
-    ///@return response object containing http status code and reply
+    /// @brief Skip to previous track
+    /// @return response object containing http status code and reply
     response previous();
-    ///@brief get information about the user's available devices
-    ///@return response object containing http status code and reply
-    response available_devices();
-    ///@brief get information about the user's current playback state, including track, track progress, and active device, shuffle etc.
-    ///@return response object containing http status code and reply
-    response current_playback_state();
-    ///@brief Get recently played tracks
-    ///@param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
-    response recently_played_tracks(int limit = 10);
-    ///@brief Seek to position of current context
-    ///@param time_ms Position in milliseconds to seek to, if the value is greater than the length of the track the player will skip to the next track
-    ///@return response object containing http status code and reply
+    /// @brief get information about the user's available devices
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response available_devices(JsonDocument filter = JsonDocument());
+    /// @brief get information about the user's current playback state, including track, track progress, and active device, shuffle etc.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response current_playback_state(JsonDocument filter = JsonDocument());
+    /// @brief Get recently played tracks
+    /// @param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response recently_played_tracks(int limit = 10, JsonDocument filter = JsonDocument());
+    /// @brief Seek to position of current context
+    /// @param time_ms Position in milliseconds to seek to, if the value is greater than the length of the track the player will skip to the next track
+    /// @return response object containing http status code and reply
     response seek_to_position(int time_ms);
-    ///@brief get users queue, response can be empty or containing episode or track objects
-    ///@return response object containing http status code and reply
-    response get_queue();
-    ///@Brief Set repeat mode, allowed values are REPEAT_OFF, REPEAT_TRACK, REPEAT_CONTEXT
-    ///@param mode Repeat mode
-    ///@return response object containing http status code and reply
+    /// @brief get users queue, response can be empty or containing episode or track objects
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_queue(JsonDocument filter = JsonDocument());
+    /// @brief Set repeat mode, allowed values are REPEAT_OFF, REPEAT_TRACK, REPEAT_CONTEXT
+    /// @param mode Repeat mode
+    /// @return response object containing http status code and reply
     response repeat_mode(char* mode);
-    ///@Brief Set shuffle mode, allowed values are SHUFFLE_ON, SHUFFLE_OFF
-    ///@param mode Shuffle mode
-    ///@return response object containing http status code and reply
+    /// @brief Set shuffle mode, allowed values are SHUFFLE_ON, SHUFFLE_OFF
+    /// @param mode Shuffle mode
+    /// @return response object containing http status code and reply
     response shuffle(bool mode);
-    ///@Brief Transfer playback to another device
-    ///@param device_id Id of the device this command is targeting
-    ///@return response object containing http status code and reply
+    /// @brief Transfer playback to another device
+    /// @param device_id Id of the device this command is targeting
+    /// @return response object containing http status code and reply
     response transfer_playback(char* device_id);
-    ///@Brief Set volume, does not work with all devices(eg. does not work on Phones)
-    ///@param value Volume value between 0 and 100
-    ///@return response object containing http status code and reply
+    /// @brief Set volume, does not work with all devices(eg. does not work on Phones)
+    /// @param value Volume value between 0 and 100
+    /// @return response object containing http status code and reply
     response set_volume(int value);
-    ///@Brief Add context to queue 
-    ///@param context_uri Spotify URI of the context to add to queue
+    /// @brief Add context to queue 
+    /// @param context_uri Spotify URI of the context to add to queue
     response add_to_queue(char* context_uri);
     #endif
   #ifdef ENABLE_ALBUM
-    ///@brief Get Spotify information for a single album.
-    ///@param album_id Spotify ID of the album
-    ///@return response object containing http status code and reply
-    response get_album(char* album_id);
-    ///@brief Get Spotify information for multiple albums identified by their Spotify IDs.
-    ///@param size Number of album ids in album_ids array
-    ///@param album_ids Array of Spotify IDs of the albums
-    ///@return response object containing http status code and reply
-    response get_albums(int size,  char** album_ids);
-    ///@brief Get Spotify information about an album's tracks. 
-    ///@param album_id Spotify ID of the album
-    ///@param limit The maximum number of tracks to return. Default: 10. Minimum: 1. Maximum: 50
-    ///@param offset The index of the first track to return. Default: 0 (the first object). Use with limit to get the next set of tracks.
-    ///@return response object containing http status code and reply
-    response get_album_tracks(char* album_id, int limit = 10, int offset = 0);
-    ///@brief Get Albums saved to the current user's  music library.
-    ///@param limit The maximum number of albums to return. Default: 10. Minimum: 1. Maximum: 50
-    ///@param offset The index of the first album to return. Default: 0 (the first object). Use with limit to get the next set of albums.
-    ///@return response object containing http status code and reply
-    response get_users_saved_albums(int limit = 10, int offset = 0);
-    ///@brief Save one or more albums to the current user's  music library.
-    ///@param size Number of album ids in album_ids array
-    ///@param album_ids Array of Spotify IDs of the albums
-    ///@return response object containing http status code and reply
+    /// @brief Get Spotify information for a single album.
+    /// @param album_id Spotify ID of the album
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_album(char* album_id, JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information for multiple albums identified by their Spotify IDs.
+    /// @param size Number of album ids in album_ids array
+    /// @param album_ids Array of Spotify IDs of the albums
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_albums(int size,  char** album_ids, JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information about an album's tracks. 
+    /// @param album_id Spotify ID of the album
+    /// @param limit The maximum number of tracks to return. Default: 10. Minimum: 1. Maximum: 50
+    /// @param offset The index of the first track to return. Default: 0 (the first object). Use with limit to get the next set of tracks.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_album_tracks(char* album_id, int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
+    /// @brief Get Albums saved to the current user's  music library.
+    /// @param limit The maximum number of albums to return. Default: 10. Minimum: 1. Maximum: 50
+    /// @param offset The index of the first album to return. Default: 0 (the first object). Use with limit to get the next set of albums.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_users_saved_albums(int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
+    /// @brief Save one or more albums to the current user's  music library.
+    /// @param size Number of album ids in album_ids array
+    /// @param album_ids Array of Spotify IDs of the albums
+    /// @return response object containing http status code and reply
     response save_albums_for_current_user(int size,  char** album_ids);
-    ///@brief Remove one or more albums from the current user's  music library.
-    ///@param size Number of album ids in album_ids array
-    ///@param album_ids Array of Spotify IDs of the albums
-    ///@return response object containing http status code and reply
+    /// @brief Remove one or more albums from the current user's  music library.
+    /// @param size Number of album ids in album_ids array
+    /// @param album_ids Array of Spotify IDs of the albums
+    /// @return response object containing http status code and reply
     response remove_users_saved_albums(int size,  char** album_ids);
-    ///@brief Check if one or more albums is already saved in the current Spotify user's  music library.
-    ///@param size Number of album ids in album_ids array
-    ///@param album_ids Array of Spotify IDs of the albums
-    ///@return response object containing http status code and reply
-    response check_useres_saved_albums(int size,  char** album_ids);
-    ///@brief Get a list of new album releases featured in Spotify
-    ///@param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
-    ///@param offset The index of the first item to return. Default: 0 (the first object). Use with limit to get the next set of items.
-    ///@param country A country: an ISO 3166-1 alpha-2 country code. Provide this parameter if you want the list of returned items to be relevant to a particular country.
-    ///@return response object containing http status code and reply
-    response get_new_releases(int limit = 10, int offset = 0, char* country = nullptr);
+    /// @brief Check if one or more albums is already saved in the current Spotify user's  music library.
+    /// @param size Number of album ids in album_ids array
+    /// @param album_ids Array of Spotify IDs of the albums
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response check_useres_saved_albums(int size,  char** album_ids, JsonDocument filter = JsonDocument());
+    /// @brief Get a list of new album releases featured in Spotify
+    /// @param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
+    /// @param offset The index of the first item to return. Default: 0 (the first object). Use with limit to get the next set of items.
+    /// @param country A country: an ISO 3166-1 alpha-2 country code. Provide this parameter if you want the list of returned items to be relevant to a particular country.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_new_releases(int limit = 10, int offset = 0, char* country = nullptr, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_ARTIST
-    ///@brief Get Spotify information for a single artist
-    ///@param artist_id Spotify ID of the artist
-    ///@return response object containing http status code and reply
-    response get_artist(char* artist_id);
-    ///@brief Get Spotify information for multiple artists 
-    ///@param size Number of artist ids in artist_ids array
-    ///@param artist_ids Array of Spotify IDs of the artists
-    ///@return response object containing http status code and reply
-    response get_several_artists(int size,  char** artist_ids);
-    ///@brief Get Spotify information about an artist's albums
-    ///@param artist_id Spotify ID of the artist
-    ///@param size_groups Number of groups in include_groups array
-    ///@param include_groups Array of groups to include in the response. Valid values are GROUP_ALBUM, GROUP_SINGLE, GROUP_APPEARS_ON, GROUP_COMPILATION or any combination of these.
-    ///@param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
-    ///@param offset The index of the first album to return. Default: 0 (the first object). Use with limit to get the next set of albums.
-    ///@return response object containing http status code and reply
-    response get_artist_albums(char* artist_id,int size_groups, char** include_groups, int limit = 10, int offset = 0);
-    ///@brief Get Spotify information about an artist's top tracks
-    ///@param artist_id Spotify ID of the artist
-    ///@param country An ISO 3166-1 alpha-2 country code or the string from_token. Provide this parameter if you want the list of returned items to be relevant to a particular country.
-    ///@return response object containing http status code and reply
-    response get_artist_top_tracks(char* artist_id, char* country = nullptr);
-    ///@brief Get Spotify information about artists related to a single artist
-    ///@param artist_id Spotify ID of the artist
-    ///@return response object containing http status code and reply
-    response get_artist_related_artist(char* artist_id);
+    /// @brief Get Spotify information for a single artist
+    /// @param artist_id Spotify ID of the artist
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_artist(char* artist_id, JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information for multiple artists 
+    /// @param size Number of artist ids in artist_ids array
+    /// @param artist_ids Array of Spotify IDs of the artists
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_several_artists(int size,  char** artist_ids, JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information about an artist's albums
+    /// @param artist_id Spotify ID of the artist
+    /// @param size_groups Number of groups in include_groups array
+    /// @param include_groups Array of groups to include in the response. Valid values are GROUP_ALBUM, GROUP_SINGLE, GROUP_APPEARS_ON, GROUP_COMPILATION or any combination of these.
+    /// @param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
+    /// @param offset The index of the first album to return. Default: 0 (the first object). Use with limit to get the next set of albums.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_artist_albums(char* artist_id,int size_groups, char** include_groups, int limit = 10, int offset = 0,JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information about an artist's top tracks
+    /// @param artist_id Spotify ID of the artist
+    /// @param country An ISO 3166-1 alpha-2 country code or the string from_token. Provide this parameter if you want the list of returned items to be relevant to a particular country.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_artist_top_tracks(char* artist_id, char* country = nullptr, JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information about artists related to a single artist
+    /// @param artist_id Spotify ID of the artist
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_artist_related_artist(char* artist_id, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_AUDIOBOOKS
-    ///@brief Get Spotify information for a single audiobook(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
-    ///@param audiobook_id Spotify ID of the audiobook
-    ///@return response object containing http status code and reply
-    response get_audiobook(char* audiobook_id);
-    ///@brief Get Spotify information for multiple audiobooks(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
-    ///@param size Number of audiobook ids in audiobook_ids array
-    ///@param audiobook_ids Array of Spotify IDs of the audiobooks
-    ///@return response object containing http status code and reply
-    response get_several_audiobooks(int size,  char** audiobook_ids);
-    ///@brief Get Spotify information about an audiobook's chapters(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
-    ///@param audiobook_id Spotify ID of the audiobook
-    ///@param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
-    ///@param offset The index of the first chapter to return. Default: 0 (the first object). Use with limit to get the next set of chapters.
-    ///@return response object containing http status code and reply
-    response get_audiobook_chapters(char* audiobook_id, int limit = 10, int offset = 0);
+    /// @brief Get Spotify information for a single audiobook(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
+    /// @param audiobook_id Spotify ID of the audiobook
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_audiobook(char* audiobook_id, JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information for multiple audiobooks(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
+    /// @param size Number of audiobook ids in audiobook_ids array
+    /// @param audiobook_ids Array of Spotify IDs of the audiobooks
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_several_audiobooks(int size,  char** audiobook_ids, JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information about an audiobook's chapters(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
+    /// @param audiobook_id Spotify ID of the audiobook
+    /// @param limit The maximum number of items to return. Default: 10. Minimum: 1. Maximum: 50
+    /// @param offset The index of the first chapter to return. Default: 0 (the first object). Use with limit to get the next set of chapters.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_audiobook_chapters(char* audiobook_id, int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
     /// @brief Get users saved audiobooks(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_users_audiobooks(int limit = 10, int offset = 0);
+    response get_users_audiobooks(int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
     /// @brief Save one or more audiobooks to the current user's  music library(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
     /// @param size Number of audiobook ids in audiobook_ids array
     /// @param audiobook_ids Array of Spotify IDs of the audiobooks
@@ -325,84 +350,96 @@ class Spotify {
     /// @brief Check if one or more audiobooks is already saved in the current Spotify user's  music library(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
     /// @param size Number of audiobook ids in audiobook_ids array
     /// @param audiobook_ids Array of Spotify IDs of the audiobooks
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response check_users_saved_audiobooks(int size,  char** audiobook_ids);
+    response check_users_saved_audiobooks(int size,  char** audiobook_ids, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_CATEGORIES
-    ///@brief Get a list of categories used to tag items in Spotify
-    ///@param limit The maximum number of items to return
-    ///@param offset The index of the first item to return
-    ///@param country An ISO 3166-1 alpha-2 country code, if ommited the returned items will not be country-specific
-    ///@param locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore, if ommited the response defaults to American English
-    ///@return response object containing http status code and reply
-    response get_several_browse_categories(int limit = 10, int offset = 0, char* country = nullptr, char* locale = nullptr);
-    ///@brief Get a single category used to tag items in Spotify
-    ///@param category_id Spotify category ID of the category
-    ///@param country An ISO 3166-1 alpha-2 country code, if ommited the returned items will not be country-specific
-    ///@param locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore, if ommited the response defaults to American English
-    ///@return response object containing http status code and reply
-    response get_single_browse_category(char* category_id, char* country = nullptr, char* locale = nullptr);
+    /// @brief Get a list of categories used to tag items in Spotify
+    /// @param limit The maximum number of items to return
+    /// @param offset The index of the first item to return
+    /// @param country An ISO 3166-1 alpha-2 country code, if ommited the returned items will not be country-specific
+    /// @param locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore, if ommited the response defaults to American English
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_several_browse_categories(int limit = 10, int offset = 0, char* country = nullptr, char* locale = nullptr, JsonDocument filter = JsonDocument());
+    /// @brief Get a single category used to tag items in Spotify
+    /// @param category_id Spotify category ID of the category
+    /// @param country An ISO 3166-1 alpha-2 country code, if ommited the returned items will not be country-specific
+    /// @param locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore, if ommited the response defaults to American English
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_single_browse_category(char* category_id, char* country = nullptr, char* locale = nullptr, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_CHAPTERS
-    ///@brief Get Spotify information for a single chapter, Only Available in US, UK, Canada, Ireland, New Zealand and Australia
-    ///@param chapter_id Spotify ID of the chapter
-    ///@return response object containing http status code and reply
-    response get_chapter(char* chapter_id);
-    ///@brief Get Spotify information for multiple chapters, Only Available in US, UK, Canada, Ireland, New Zealand and Australia
-    ///@param size Number of chapter ids in chapter_ids array
-    ///@param chapter_ids Array of Spotify IDs of the chapters
-    ///@return response object containing http status code and reply
-    response get_several_chapters(int size,  char** chapter_ids);
+    /// @brief Get Spotify information for a single chapter, Only Available in US, UK, Canada, Ireland, New Zealand and Australia
+    /// @param chapter_id Spotify ID of the chapter
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_chapter(char* chapter_id, JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information for multiple chapters, Only Available in US, UK, Canada, Ireland, New Zealand and Australia
+    /// @param size Number of chapter ids in chapter_ids array
+    /// @param chapter_ids Array of Spotify IDs of the chapters
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_several_chapters(int size,  char** chapter_ids, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_EPISODES
-    ///@brief Get Spotify information for a single episode
-    ///@param episode_id Spotify ID of the episode
-    ///@return response object containing http status code and reply
-    response get_episode(char* episode_id);
-    ///@brief Get Spotify information for multiple episodes
-    ///@param size Number of episode ids in episode_ids array
-    ///@param episode_ids Array of Spotify IDs of the episodes
-    ///@return response object containing http status code and reply
-    response get_several_episodes(int size,  char** episode_ids);
-    ///@brief Get users saved episodes
-    ///@param limit The maximum number of items to return,
-    ///@param offset The index of the first item to return
-    ///@return response object containing http status code and reply
-    response get_users_saved_episodes(int limit = 10, int offset = 0);
-    ///@brief Save one or more episodes to the current user's  music library
-    ///@param size Number of episode ids in episode_ids array
-    ///@param episode_ids Array of Spotify IDs of the episodes
-    ///@return response object containing http status code and reply
+    /// @brief Get Spotify information for a single episode
+    /// @param episode_id Spotify ID of the episode
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_episode(char* episode_id, JsonDocument filter = JsonDocument());
+    /// @brief Get Spotify information for multiple episodes
+    /// @param size Number of episode ids in episode_ids array
+    /// @param episode_ids Array of Spotify IDs of the episodes
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_several_episodes(int size,  char** episode_ids, JsonDocument filter = JsonDocument());
+    /// @brief Get users saved episodes
+    /// @param limit The maximum number of items to return,
+    /// @param offset The index of the first item to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_users_saved_episodes(int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
+    /// @brief Save one or more episodes to the current user's  music library
+    /// @param size Number of episode ids in episode_ids array
+    /// @param episode_ids Array of Spotify IDs of the episodes
+    /// @return response object containing http status code and reply
     response save_episodes_for_current_user(int size,  char** episode_ids);
-    ///@brief Remove one or more episodes from the current user's  music library
-    ///@param size Number of episode ids in episode_ids array
-    ///@param episode_ids Array of Spotify IDs of the episodes
-    ///@return response object containing http status code and reply
+    /// @brief Remove one or more episodes from the current user's  music library
+    /// @param size Number of episode ids in episode_ids array
+    /// @param episode_ids Array of Spotify IDs of the episodes
+    /// @return response object containing http status code and reply
     response remove_episodes_for_current_user(int size,  char** episode_ids);
-    ///@brief Check if one or more episodes is already saved in the current Spotify user's  music library
-    ///@param size Number of episode ids in episode_ids array
-    ///@param episode_ids Array of Spotify IDs of the episodes
-    ///@return response object containing http status code and reply
-    response check_users_saved_episodes(int size,  char** episode_ids);
+    /// @brief Check if one or more episodes is already saved in the current Spotify user's  music library
+    /// @param size Number of episode ids in episode_ids array
+    /// @param episode_ids Array of Spotify IDs of the episodes
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response check_users_saved_episodes(int size,  char** episode_ids, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_GENRES
-    ///@brief Get a list of available genre seeds for recommendations
-    ///@return response object containing http status code and reply
-    response get_available_genre_seeds();
+    /// @brief Get a list of available genre seeds for recommendations
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_available_genre_seeds(JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_MARKETS
-    ///@brief Get a list of available markets for recommendations
-    ///@return response object containing http status code and reply
-    response get_available_markets();
+    /// @brief Get a list of available markets for recommendations
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_available_markets(JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_PLAYLISTS
-    ///@brief Get Spotify information for a single playlist
-    ///@param playlist_id Spotify ID of the playlist
-    ///@param size Number of fields in fields array
-    ///@param fields Array of fields to return, leave empty to return all fields
-    ///@param additional_types A comma-separated list of item types that your client supports besides the default track type. Valid types are: track and episode.
-    ///@return response object containing http status code and reply
-    response get_playlist(char* playlist_id,int size = 0, char** fields = nullptr,int size_of_additional_types = 0, char ** additional_types = nullptr);
+    /// @brief Get Spotify information for a single playlist
+    /// @param playlist_id Spotify ID of the playlist
+    /// @param size Number of fields in fields array
+    /// @param fields Array of fields to return, leave empty to return all fields
+    /// @param additional_types A comma-separated list of item types that your client supports besides the default track type. Valid types are: track and episode.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
+    /// @return response object containing http status code and reply
+    response get_playlist(char* playlist_id,int size = 0, char** fields = nullptr,int size_of_additional_types = 0, char ** additional_types = nullptr, JsonDocument filter = JsonDocument());
     /// @brief Change details of a playlist
     /// @param playlist_id ID of the playlist
     /// @param name Set the name of the playlist
@@ -416,8 +453,9 @@ class Spotify {
     /// @param fields Filters for the query: a comma-separated list of the fields to return. If omitted, all fields are returned. For example, to get just the total number of items and the request limit: 
     /// @param limit Number of items to return
     /// @param offset The index of the first item to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_playlist_items(char* playlist_id, char* fields, int limit = 10, int offset = 0);
+    response get_playlist_items(char* playlist_id, char* fields, int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
     /// @brief Either reorder or replace items in a playlist depending on the request's parameters
     /// @param playlist_id Id of the playlist
     /// @param size Size of uris array
@@ -443,14 +481,16 @@ class Spotify {
     /// @brief Get a list of users playlists
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_current_users_playlists(int limit = 10, int offset = 0);
+    response get_current_users_playlists(int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
     /// @brief get a users playlist
     /// @param user_id Id of the user
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_user_playlists(char* user_id,int limit = 10, int offset = 0);
+    response get_user_playlists(char* user_id,int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
     /// @brief Create a playlist
     /// @param user_id Id of the user
     /// @param name Name of the playlist
@@ -465,19 +505,22 @@ class Spotify {
     /// @param timestamp A timestamp in ISO 8601 format: yyyy-MM-ddTHH:mm:ss if ommited current utc time is used
     /// @param country An ISO 3166-1 alpha-2 country code, Provide this to ensure that the category exists for a particular country.
     /// @param locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore, if ommited the response defaults to American English
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_featured_playlists( int limit = 10, int offset  = 0, char* timestamp  = nullptr, char* country = nullptr, char* locale = nullptr);
+    response get_featured_playlists( int limit = 10, int offset  = 0, char* timestamp  = nullptr, char* country = nullptr, char* locale = nullptr, JsonDocument filter = JsonDocument());
     /// @brief Get a list of Spotify playlists tagged with a particular category.
     /// @param category_id Category ID can be got from get_several_browse_categories
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
     /// @param country The country: an ISO 3166-1 alpha-2 country code, Provide this to ensure that the category exists for a particular country.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_category_playlists(char* category_id, int limit = 10, int offset = 0, char* country = nullptr);
+    response get_category_playlists(char* category_id, int limit = 10, int offset = 0, char* country = nullptr, JsonDocument filter = JsonDocument());
     /// @brief Get a cover image of a playlist
     /// @param playlist_id Id of the playlist
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_playlist_cover_image(char* playlist_id);
+    response get_playlist_cover_image(char* playlist_id, JsonDocument filter = JsonDocument());
     /// @brief Upload a custom cover image of a playlist
     /// @param playlist_id Id of the playlist
     /// @param data Image data
@@ -493,30 +536,35 @@ class Spotify {
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
     /// @param market An ISO 3166-1 alpha-2 country code or the string from_token. Provide this parameter if you want the list of returned items to be relevant to a particular country.
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response search(char* q,int type_size , char** type , int limit = 10, int offset = 0, char* market = nullptr);
+    response search(char* q,int type_size , char** type , int limit = 10, int offset = 0, char* market = nullptr, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_SHOWS
     /// @brief Get Spotify information for a single show
     /// @param show_id Spotify ID of the show
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_show(char* show_id);
+    response get_show(char* show_id, JsonDocument filter = JsonDocument());
     /// @brief Get Spotify information for multiple shows
     /// @param size Number of show ids in show_ids array
     /// @param show_ids Array of Spotify IDs of the shows
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_several_shows(int size,  char** show_ids);
+    response get_several_shows(int size,  char** show_ids, JsonDocument filter = JsonDocument());
     /// @brief Get Spotify information about a show's episodes
     /// @param show_id Spotify ID of the show
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_show_episodes(char* show_id, int limit = 10, int offset = 0);
+    response get_show_episodes(char* show_id, int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
     /// @brief Get users saved shows
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_users_saved_shows(int limit = 10, int offset = 0);
+    response get_users_saved_shows(int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
     /// @brief Save one or more shows to the current user's  music library
     /// @param size Number of show ids in show_ids array
     /// @param show_ids Array of Spotify IDs of the shows
@@ -530,24 +578,28 @@ class Spotify {
     /// @brief Check if one or more shows is already saved in the current Spotify user's  music library
     /// @param size Number of show ids in show_ids array
     /// @param show_ids Array of Spotify IDs of the shows
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response check_users_saved_shows(int size,  char** show_ids);
+    response check_users_saved_shows(int size,  char** show_ids, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_TRACKS
     /// @brief Get Spotify information for a single track
     /// @param track_id Spotify ID of the track
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_track(char* track_id);
+    response get_track(char* track_id, JsonDocument filter = JsonDocument());
     /// @brief Get Spotify information for multiple tracks
     /// @param size Number of track ids in track_ids array
     /// @param track_ids Array of Spotify IDs of the tracks
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_several_tracks(int size,  char** track_ids);
+    response get_several_tracks(int size,  char** track_ids, JsonDocument filter = JsonDocument());
     /// @brief Get users saved tracks
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_user_saved_tracks(int limit = 10, int offset = 0);
+    response get_user_saved_tracks(int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
     /// @brief Save one or more tracks to the current user's  music library
     /// @param size Number of track ids in track_ids array
     /// @param track_ids Array of Spotify IDs of the tracks
@@ -561,42 +613,50 @@ class Spotify {
     /// @brief Check if one or more tracks is already saved in the current Spotify user's  music library
     /// @param size Number of track ids in track_ids array
     /// @param track_ids Array of Spotify IDs of the tracks
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response check_user_saved_tracks(int size,  char** track_ids);
+    response check_user_saved_tracks(int size,  char** track_ids, JsonDocument filter = JsonDocument());
     /// @brief Get audio features for multiple tracks
     /// @param size Number of track ids in track_ids array
     /// @param track_ids Array of Spotify IDs of the tracks
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_tracks_audio_features(int size,  char** track_ids);
+    response get_tracks_audio_features(int size,  char** track_ids, JsonDocument filter = JsonDocument());
     /// @brief Get audio features for a single track
     /// @param track_id Spotify ID of the track
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_track_audio_features(char* track_id);
+    response get_track_audio_features(char* track_id, JsonDocument filter = JsonDocument());
     /// @brief Get audio analysis for a single track
     /// @param track_id Spotify ID of the track
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_track_audio_analysis(char* track_id);
+    response get_track_audio_analysis(char* track_id, JsonDocument filter = JsonDocument());
     /// @brief Get a list of new album releases featured in Spotify
     /// @param recom Recommendation object containing atleast one seed
     /// @param limit The maximum number of items to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_recommendations(recommendations& recom, int limit = 10);
+    response get_recommendations(recommendations& recom, int limit = 10, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_USER    
     /// @brief Get detailed profile information about the current user (including the current user's username)
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_current_user_profile();
+    response get_current_user_profile(JsonDocument filter = JsonDocument());
     /// @brief Get users top items
     /// @param type The type of item to get, Valid values are: artists or tracks
     /// @param time_range Over what time frame the affinities are computed, Valid values are: long_term, medium_term, short_term
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_user_top_items(char* type, char* time_range = "medium_term", int limit = 10, int offset = 0);
+    response get_user_top_items(char* type, char* time_range = "medium_term", int limit = 10, int offset = 0, JsonDocument filter = JsonDocument());
     /// @brief Get a users profile
     /// @param user_id Id of the user
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_user_profile(char* user_id);
+    response get_user_profile(char* user_id, JsonDocument filter = JsonDocument());
     /// @brief Follow a playlist
     /// @param playlist_id The Id of the playlist
     /// @param is_public If true the playlist will be included in user's public playlists, if false it will remain private.
@@ -610,8 +670,9 @@ class Spotify {
     /// @param after The last artist ID retrieved from the previous request
     /// @param type The ID type, currently only artist is supported
     /// @param limit The maximum number of items to return
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_followed_artists(char* after, char* type = "artist", int limit = 10);
+    response get_followed_artists(char* after, char* type = "artist", int limit = 10, JsonDocument filter = JsonDocument());
     /// @brief Follow artists or users
     /// @param type The ID type, artist or user
     /// @param size Number of artist or user ids in artist_user_ids array
@@ -628,14 +689,16 @@ class Spotify {
     /// @param type The ID type, artist or user
     /// @param size Number of artist or user ids in artist_user_ids array
     /// @param artist_user_ids Array of Spotify IDs of the artists or users
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response check_if_user_follows_artists_or_users(char* type, int size,  char** artist_user_ids);
+    response check_if_user_follows_artists_or_users(char* type, int size,  char** artist_user_ids, JsonDocument filter = JsonDocument());
     /// @brief Check if users follow a playlist
     /// @param playlist_id The ID of the playlist
     /// @param size Number of user ids in user_ids array
     /// @param user_ids Array of Spotify IDs of the users
+    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response check_if_users_follow_playlist(char* playlist_id, int size,  char** user_ids);
+    response check_if_users_follow_playlist(char* playlist_id, int size,  char** user_ids, JsonDocument filter = JsonDocument());
     #endif
   #ifdef ENABLE_SIMPIFIED
     /// @brief Get Current track name
@@ -709,7 +772,7 @@ class Spotify {
     /// @brief Users set redirect uri
     char _redirect_uri[100] = "";
     /// @brief Users refresh token
-    char _refresh_token[200] = "";
+    char _refresh_token[300] = "";
     /// @brief user auth code
     char _auth_code[800] = "";
     /// @brief Users set client id
@@ -723,7 +786,7 @@ class Spotify {
     /// @brief port
     int _port;
     /// @brief Access token
-    String  _access_token; 
+    char  _access_token[400]; 
     /// @brief Root login Page
     void server_on_root();
     /// @brief Response from login page
@@ -739,8 +802,20 @@ class Spotify {
     /// @brief Currying function for root login page response
     friend std::function<void()> callback_fn_response(Spotify *spotify);
     /// @brief Get Access Token with refresh token
-    /// @return Bool if token was successfully retrieved
+    /// @return true if token was successfully retrieved
     bool get_token();
+    bool token_base_req(String payload);
+    /// @brief Checks if http code is valid
+    /// @param code Http code to check
+    /// @return True if code is valid
+    bool valid_http_code(int code);
+    /// @brief Process headers of response
+    /// @return Http code
+    header_resp process_headers();
+    /// @brief Process response
+    /// @param filter Filter to apply to response
+    /// @return JsonDocument containing response
+    JsonDocument process_response(header_resp header, JsonDocument filter = JsonDocument());
     /// @brief Initialize response object
     /// @param response_obj Response object to initialize
     void init_response(response* response_obj);
@@ -749,7 +824,7 @@ class Spotify {
     /// @param type Type of request
     /// @param payload_size Size of payload
     /// @param payload Payload to send
-    response RestApi(char* rest_url, char* type, int payload_size = 0, char* payload = nullptr);
+    response RestApi(char* rest_url, char* type, int payload_size = 0, char* payload = nullptr, JsonDocument filter = JsonDocument());
     /// @brief Make PUT request to Spotify API
     /// @param rest_url URL to make request to
     /// @param payload_size Size of payload
@@ -770,7 +845,7 @@ class Spotify {
     /// @brief Make GET request to Spotify API
     /// @param rest_url URL to make request to
     /// @return Response object containing http status code and reply
-    response RestApiGet(char* rest_url); 
+    response RestApiGet(char* rest_url,  JsonDocument filter = JsonDocument());
     /// @brief Convert array of chars to one char array, seperated by comma
     /// @param size Size of array
     /// @param array Array to convert
@@ -806,7 +881,9 @@ class Spotify {
     void populate_float_values(std::map<char*, float>& map, recommendations& recom);
   #endif
     /// @brief Extract endpoint from url with regex
-    const char * extract_endpoint(const char* rest_url);
+    /// @param rest_url URL to extract endpoint from
+    /// @return Endpoint
+    String extract_endpoint(const char* rest_url);
     /// @brief Root CA for Spotify API
     const char* _spotify_root_ca PROGMEM= \
     "-----BEGIN CERTIFICATE-----\n"\

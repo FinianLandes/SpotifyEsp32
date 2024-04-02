@@ -55,8 +55,9 @@ void connect_to_wifi(){
 4. If you want to set your tokens during runtime you can use the same code pass an empty char array to the constructor and set the tokens later in the webserver. By calling the "get_tokens" function you could then save these tokens with [SPIFFS](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/storage/spiffs.html). And during next runtime pass them from the memory. </br>
 5. Now you can use the library. </br>
 ## Usage
-- The normal functions return an response object. You can get the http code of type int with ```response_obj.status_code``` and the response message of type String with ```response_obj.reply```. </br>
+- The normal functions return an response object. You can get the http code of type int with ```response_obj.status_code``` and the response message as JsonDocument with ```response_obj.reply```. </br>
 To print the response you can use the ```print_response(response_obj)``` function. </br>
+- To minimize RAM usage all functions making a GET request have an optional last parameter which is a filter JsonDocument which can be used to filter the response and only get the necessary data. Filtering works the following way: you pass a JsonDocument with the same structure than the response (This structure can be looked up in the Documentation of the Spotify Web API) where wanted data is just set to true and unwanted data is not included. Sadly there is no new tutorial for v7 of Arduino Json but the one of v6 is nearly identical except the definition of the JsonDocumet which can now be done in all cases like that: ```JsonDocument doc;``` [Filter tutorial](https://arduinojson.org/news/2020/03/22/version-6-15-0/)  </br>
 - To search for methods you can use the [Spotify Web API Reference](https://developer.spotify.com/documentation/web-api/reference/), all of the methods shown there are implemented </br>
 - There are also some helper and some simplified functions. </br>
 ```c++
