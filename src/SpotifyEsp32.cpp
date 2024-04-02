@@ -241,7 +241,6 @@ response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* pa
   }
   header_resp header_data = process_headers();
   JsonDocument response = process_response(header_data, filter);
-  
   if(_debug_on){
     Serial.printf("%s \"%s\" Status: %i\n", type, extract_endpoint(rest_url).c_str(), header_data.http_code);
     Serial.print("Reply: ");
@@ -304,6 +303,7 @@ bool Spotify::token_base_req(String payload){
   return true;
 }
 bool Spotify::get_refresh_token() {
+  Serial.println("Getting refresh token");
   bool reply = false;
   String payload = "grant_type=authorization_code&code=" + String(_auth_code) + "&redirect_uri=" + String(_redirect_uri)+ "callback";
   if(!token_base_req(payload)){
@@ -316,6 +316,7 @@ bool Spotify::get_refresh_token() {
   filter["refresh_token"] = true;
   JsonDocument response = process_response(header_data, filter);
   if(!response.isNull()){
+    Serial.println("Got refresh token");
     reply = true;
     strncpy(_refresh_token, response["refresh_token"].as<const char*>(), sizeof(_refresh_token));
   }
@@ -375,15 +376,11 @@ header_resp Spotify::process_headers(){
       if (line.startsWith("HTTP") || line.startsWith("Content-Length") || line.startsWith("Content-Type")){
         Serial.println(line);
       }
-    }else{
-      _client.readStringUntil('\n\r\n\r');
-      break;
     }
     if (line == "\r") {
       break;
     }
   }
-
   return response;
 }
 
@@ -393,10 +390,17 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
   if(_debug_on){
     Serial.printf("Filter: %s\n", filter.isNull() ? "Off" : "On");
   }
+  if(!_client.connected()){
+    return response;
+  }
   while (recv_bytes < header_data.content_length){
     recv_bytes += _client.available();
+    Serial.printf("Received Bytes: %d\n", recv_bytes);
     if (filter.isNull() || !valid_http_code(header_data.http_code)) {
-      deserializeJson(response, _client);
+      DeserializationError err = deserializeJson(response, _client);
+      if(err && _debug_on){
+        Serial.printf("Error: %s\n", err.c_str());
+      }
       break;
     } else if(!filter.isNull()) {
       deserializeJson(response, _client, DeserializationOption::Filter(filter));
