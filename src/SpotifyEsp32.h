@@ -76,6 +76,7 @@ typedef struct{
 typedef struct{
   int http_code;
   size_t content_length;
+  String content_type;
 } header_resp;
 /// @brief Recommendation object, used to create recommendations
 struct recommendations {

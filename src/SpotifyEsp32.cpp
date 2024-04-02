@@ -367,13 +367,14 @@ header_resp Spotify::process_headers(){
     String line = _client.readStringUntil('\n');
     if (line.startsWith("HTTP")) {
       response.http_code = line.substring(9, 12).toInt();
-    }
-    if (line.startsWith("Content-Length")) {
+    } else if(line.startsWith("Content-Type") || line.startsWith("content-type")){
+      response.content_type = line.substring(14);
+    }else if (line.startsWith("Content-Length") || line.startsWith("content-length")) {
       response.content_length = line.substring(16).toInt();
       can_break = true;
     }
     if(_debug_on){
-      if (line.startsWith("HTTP") || line.startsWith("Content-Length") || line.startsWith("Content-Type")){
+      if (line.startsWith("HTTP") || line.startsWith("Content-Length") || line.startsWith("Content-Type")|| line.startsWith("content-length") || line.startsWith("content-type")){
         Serial.println(line);
       }
     }else if(can_break){
@@ -393,7 +394,7 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
   if(_debug_on){
     Serial.printf("Filter: %s\n", filter.isNull() ? "Off" : "On");
   }
-  if(!_client.connected()){
+  if(!_client.connected() || header_data.content_type.indexOf("application/json") == -1){
     return response;
   }
   while (recv_bytes < header_data.content_length){
@@ -405,7 +406,10 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
       }
       break;
     } else if(!filter.isNull()) {
-      deserializeJson(response, _client, DeserializationOption::Filter(filter));
+      DeserializationError err = deserializeJson(response, _client, DeserializationOption::Filter(filter));
+      if(err && _debug_on){
+        Serial.printf("Error: %s\n", err.c_str());
+      }
       break;
     }
   }
