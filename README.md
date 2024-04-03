@@ -59,6 +59,25 @@ void connect_to_wifi(){
 To print the response you can use the ```print_response(response_obj)``` function. </br>
 - To minimize RAM usage all functions making a GET request have an optional last parameter which is a filter JsonDocument which can be used to filter the response and only get the necessary data. Filtering works the following way: you pass a JsonDocument with the same structure than the response (This structure can be looked up in the Documentation of the Spotify Web API) where wanted data is just set to true and unwanted data is not included. Sadly there is no new tutorial for v7 of Arduino Json but the one of v6 is nearly identical except the definition of the JsonDocumet which can now be done in all cases like that: ```JsonDocument doc;``` [Filter tutorial](https://arduinojson.org/news/2020/03/22/version-6-15-0/)  </br>
 - To search for methods you can use the [Spotify Web API Reference](https://developer.spotify.com/documentation/web-api/reference/), all of the methods shown there are implemented </br>
+- To minimize FLASH usage you can add these Macros before including the library, these can disable the individual endpoints and the webserver functionality. </br>
+```c++
+#define DISABLE_PLAYER
+#define DISABLE_ALBUM
+#define DISABLE_ARTIST
+#define DISABLE_AUDIOBOOKS
+#define DISABLE_CATEGORIES
+#define DISABLE_CHAPTERS
+#define DISABLE_EPISODES
+#define DISABLE_GENRES
+#define DISABLE_MARKETS
+#define DISABLE_PLAYLISTS
+#define DISABLE_SEARCH
+#define DISABLE_SHOWS
+#define DISABLE_TRACKS
+#define DISABLE_USER
+#define DISABLE_SIMPIFIED
+#define DISABLE_WEB_SERVER
+```
 - There are also some helper and some simplified functions. </br>
 ```c++
     // Get the current track name and return it as String
