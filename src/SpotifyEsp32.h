@@ -16,6 +16,7 @@
 //#define DISABLE_TRACKS
 //#define DISABLE_USER
 //#define DISABLE_SIMPIFIED
+//#define DISABLE_WEB_SERVER
 
 
 #include <Arduino.h>
