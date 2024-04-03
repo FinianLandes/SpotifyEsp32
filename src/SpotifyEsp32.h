@@ -1,21 +1,21 @@
 #ifndef SpotifyEsp32
 #define SpotifyEsp32
-
-#define ENABLE_PLAYER
-#define ENABLE_ALBUM
-#define ENABLE_ARTIST
-#define ENABLE_AUDIOBOOKS
-#define ENABLE_CATEGORIES
-#define ENABLE_CHAPTERS
-#define ENABLE_EPISODES
-#define ENABLE_GENRES
-#define ENABLE_MARKETS
-#define ENABLE_PLAYLISTS
-#define ENABLE_SEARCH
-#define ENABLE_SHOWS
-#define ENABLE_TRACKS
-#define ENABLE_USER
-#define ENABLE_SIMPIFIED
+//Uncomment the following lines to disable certain features
+//#define DISABLE_PLAYER
+//#define DISABLE_ALBUM
+//#define DISABLE_ARTIST
+//#define DISABLE_AUDIOBOOKS
+//#define DISABLE_CATEGORIES
+//#define DISABLE_CHAPTERS
+//#define DISABLE_EPISODES
+//#define DISABLE_GENRES
+//#define DISABLE_MARKETS
+//#define DISABLE_PLAYLISTS
+//#define DISABLE_SEARCH
+//#define DISABLE_SHOWS
+//#define DISABLE_TRACKS
+//#define DISABLE_USER
+//#define DISABLE_SIMPIFIED
 
 
 #include <Arduino.h>
@@ -162,7 +162,7 @@ class Spotify {
     /// @brief Check if user is authenticated
     /// @return true if user is authenticated
     bool is_auth();
-  #ifdef ENABLE_PLAYER
+  #ifndef DISABLE_PLAYER
     /// @brief Get information about the user's current playback state, including track, track progress, and active device.
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
@@ -233,7 +233,7 @@ class Spotify {
     /// @param context_uri Spotify URI of the context to add to queue
     response add_to_queue(char* context_uri);
     #endif
-  #ifdef ENABLE_ALBUM
+  #ifndef DISABLE_ALBUM
     /// @brief Get Spotify information for a single album.
     /// @param album_id Spotify ID of the album
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
@@ -282,7 +282,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response get_new_releases(int limit = 10, int offset = 0, char* country = nullptr, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_ARTIST
+  #ifndef DISABLE_ARTIST
     /// @brief Get Spotify information for a single artist
     /// @param artist_id Spotify ID of the artist
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
@@ -315,7 +315,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response get_artist_related_artist(char* artist_id, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_AUDIOBOOKS
+  #ifndef DISABLE_AUDIOBOOKS
     /// @brief Get Spotify information for a single audiobook(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
     /// @param audiobook_id Spotify ID of the audiobook
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
@@ -357,7 +357,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response check_users_saved_audiobooks(int size,  char** audiobook_ids, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_CATEGORIES
+  #ifndef DISABLE_CATEGORIES
     /// @brief Get a list of categories used to tag items in Spotify
     /// @param limit The maximum number of items to return
     /// @param offset The index of the first item to return
@@ -374,7 +374,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response get_single_browse_category(char* category_id, char* country = nullptr, char* locale = nullptr, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_CHAPTERS
+  #ifndef DISABLE_CHAPTERS
     /// @brief Get Spotify information for a single chapter, Only Available in US, UK, Canada, Ireland, New Zealand and Australia
     /// @param chapter_id Spotify ID of the chapter
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
@@ -387,7 +387,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response get_several_chapters(int size,  char** chapter_ids, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_EPISODES
+  #ifndef DISABLE_EPISODES
     /// @brief Get Spotify information for a single episode
     /// @param episode_id Spotify ID of the episode
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
@@ -422,19 +422,19 @@ class Spotify {
     /// @return response object containing http status code and reply
     response check_users_saved_episodes(int size,  char** episode_ids, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_GENRES
+  #ifndef DISABLE_GENRES
     /// @brief Get a list of available genre seeds for recommendations
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
     response get_available_genre_seeds(JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_MARKETS
+  #ifndef DISABLE_MARKETS
     /// @brief Get a list of available markets for recommendations
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
     response get_available_markets(JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_PLAYLISTS
+  #ifndef DISABLE_PLAYLISTS
     /// @brief Get Spotify information for a single playlist
     /// @param playlist_id Spotify ID of the playlist
     /// @param size Number of fields in fields array
@@ -531,7 +531,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response add_custom_playlist_cover_image(char* playlist_id, char* data);
     #endif
-  #ifdef ENABLE_SEARCH
+  #ifndef DISABLE_SEARCH
     /// @brief Search for an item
     /// @param q Search query keywords and optional field filters and operators
     /// @param type_size Number of item types in type array
@@ -543,7 +543,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response search(char* q,int type_size , char** type , int limit = 10, int offset = 0, char* market = nullptr, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_SHOWS
+  #ifndef DISABLE_SHOWS
     /// @brief Get Spotify information for a single show
     /// @param show_id Spotify ID of the show
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
@@ -585,7 +585,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response check_users_saved_shows(int size,  char** show_ids, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_TRACKS
+  #ifndef DISABLE_TRACKS
     /// @brief Get Spotify information for a single track
     /// @param track_id Spotify ID of the track
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
@@ -642,7 +642,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response get_recommendations(recommendations& recom, int limit = 10, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_USER    
+  #ifndef DISABLE_USER    
     /// @brief Get detailed profile information about the current user (including the current user's username)
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
@@ -703,7 +703,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response check_if_users_follow_playlist(char* playlist_id, int size,  char** user_ids, JsonDocument filter = JsonDocument());
     #endif
-  #ifdef ENABLE_SIMPIFIED
+  #ifndef DISABLE_SIMPIFIED
     /// @brief Get Current track name
     /// @return Current track name as String
     String current_track_name();
@@ -778,8 +778,14 @@ class Spotify {
   #else
     void* _server;
   #endif
+    /// @brief HTTPS client
     WiFiClientSecure _client;
+    /// @brief Host for Tokens
     const char* _host = "api.spotify.com";
+    /// @brief Base url for API requests
+    const char* _base_url = "https://api.spotify.com/v1/";
+    /// @brief Host for Tokens
+    const char* _token_host = "accounts.spotify.com";
     /// @brief Maximum number of items in one request
     static const int _max_num_items = 20;
     /// @brief Maximum size of char array(35 been the size of a uri + comma + 150 as buffer for url etc.)
@@ -872,7 +878,7 @@ class Spotify {
     /// @return Pointer to data array
     void array_to_json_array(int size,  char** array, char* data, int data_size = _max_char_size);
     
-  #ifdef ENABLE_TRACKS
+  #ifndef DISABLE_TRACKS
     /// @brief Check if recommendation value is valid
     /// @param param Float value to check
     /// @return Bool if value is valid
