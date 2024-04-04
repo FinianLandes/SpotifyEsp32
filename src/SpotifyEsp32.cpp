@@ -260,6 +260,7 @@ response Spotify::RestApi(char* rest_url, char* type, int payload_size, char* pa
     _client.println();
     _client.println(payload);
   }
+
   header_resp header_data = process_headers();
   JsonDocument response = process_response(header_data, filter);
   if(_debug_on){
@@ -416,6 +417,19 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
     Serial.printf("Filter: %s\n", filter.isNull() ? "Off" : "On");
   }
   if(!_client.connected() || header_data.content_type.indexOf("application/json") == -1){
+    String response_str;
+    if(_debug_on){
+      Serial.println("No JSON response");
+    }
+    if(header_data.http_code == 204){
+      response["message"] = "No Content";
+    }else{
+      while (_client.connected() && recv_bytes < header_data.content_length){
+        recv_bytes += _client.available();
+        response_str += _client.readStringUntil('\n') + "\n";
+      }
+      response["message"] = response_str;
+    }
     return response;
   }
   while (recv_bytes < header_data.content_length){
@@ -1432,7 +1446,13 @@ response Spotify::unfollow_playlist(char* playlist_id) {
 }
 response Spotify::get_followed_artists(char* after, char* type, int limit, JsonDocument filter) {
   char url[100];
-  snprintf(url, sizeof(url), "%sme/following?type=%s&after=%s&limit=%d", _base_url, type, after, limit);
+  if(after == nullptr){
+    snprintf(url, sizeof(url), "%sme/following?type=%s&limit=%d", _base_url, type, limit);
+  }
+  else{
+    snprintf(url, sizeof(url), "%sme/following?type=%s&after=%s&limit=%d", _base_url, type, after, limit);
+  }
+
 
   return RestApiGet(url, filter);
 }

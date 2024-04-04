@@ -25,11 +25,10 @@
 #include <ArduinoJson.h>
 #include <UrlEncode.h>
 #include <base64.h>
-#include <iostream>
-#include <functional>
-#include <map>
-#include <regex>
 
+#ifndef DISABLE_TRACKS
+#include <map>
+#endif
 #ifndef DISABLE_WEB_SERVER
 #include <WebServer.h>
 #endif
@@ -671,14 +670,14 @@ class Spotify {
     /// @return response object containing http status code and reply
     response unfollow_playlist(char* playlist_id);
     /// @brief get users followed artists
-    /// @param after The last artist ID retrieved from the previous request
+    /// @param after The last artist ID retrieved from the previous request(Optional)
     /// @param type The ID type, currently only artist is supported
     /// @param limit The maximum number of items to return
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response get_followed_artists(char* after, char* type = "artist", int limit = 10, JsonDocument filter = JsonDocument());
+    response get_followed_artists(char* after = nullptr, char* type = "artist", int limit = 10, JsonDocument filter = JsonDocument());
     /// @brief Follow artists or users
-    /// @param type The ID type, artist or user
+    /// @param type The ID type, artist or user 
     /// @param size Number of artist or user ids in artist_user_ids array
     /// @param artist_user_ids Array of Spotify IDs of the artists or users
     /// @return response object containing http status code and reply
