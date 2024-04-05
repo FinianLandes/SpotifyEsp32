@@ -1,0 +1,19 @@
+name: Publish to PlatformIO
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: PlatformIO Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: PlatformIO Publish
+        uses: bojit/platformio-publish@main
+        with:
+          token: ${{ secrets.PLATFORMIO_TOKEN }}
