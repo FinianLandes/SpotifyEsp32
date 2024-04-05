@@ -20,10 +20,8 @@
 
 
 #include <Arduino.h>
-#include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
-#include <UrlEncode.h>
 #include <base64.h>
 
 #ifndef DISABLE_TRACKS
