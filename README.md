@@ -3,11 +3,9 @@ This library is a wrapper for the [Spotify Web API](https://developer.spotify.co
 
 ## Dependencies
 - [ArduinoJson](https://arduinojson.org/) </br>
-- [WebServer](https://github.com/espressif/arduino-esp32/blob/master/libraries/WebServer/src/WebServer.h) </br>
-- [WifiClientSecure](https://github.com/espressif/arduino-esp32/tree/master/libraries/WiFiClientSecure);
-- [WiFi](https://www.arduino.cc/en/Reference/WiFi) </br>
-- [UrlEncode](https://github.com/plageoj/urlencode) </br>
+- [WifiClientSecure](https://github.com/espressif/arduino-esp32/tree/master/libraries/WiFiClientSecure) </br>
 - [base64](https://github.com/Densaugeo/base64_arduino) </br>
+- [WebServer](https://github.com/espressif/arduino-esp32/blob/master/libraries/WebServer/src/WebServer.h) (Optional) </br>
 
 ## Setup
 [Youtube Tutorial for the setup](https://www.youtube.com/watch?v=xNjbRq59dlc)</br>
@@ -119,4 +117,5 @@ Due to the Wifi and HTTPS this library is quite big, so i recommend setting the 
 - If there are still issues you can open an issue on this repository. </br>
 ## Working Devices
 - ESP32 WROOM</br>
-- Should also work on ESP2866 and other ESP32 models(Untested).</br>
+- Should also work on other ESP32 models(Untested).</br>
+- For now it probably uses too much flash and memory to run on a standard ESP2866
