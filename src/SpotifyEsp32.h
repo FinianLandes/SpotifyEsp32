@@ -19,7 +19,6 @@
 //#define DISABLE_WEB_SERVER
 
 
-#include <Arduino.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <base64.h>
