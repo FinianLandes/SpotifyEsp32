@@ -1489,7 +1489,7 @@ response Spotify::check_if_users_follow_playlist(const char* playlist_id, int si
 }
 #endif
 //Simplified functions, formatting functions
-#ifndef DISABLE_SIMPIFIED
+#ifndef DISABLE_SIMPLIFIED
 String Spotify::current_track_name(){
   String track_name = "Something went wrong";
   JsonDocument filter;
