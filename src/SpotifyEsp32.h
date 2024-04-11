@@ -15,7 +15,7 @@
 //#define DISABLE_SHOWS
 //#define DISABLE_TRACKS
 //#define DISABLE_USER
-//#define DISABLE_SIMPIFIED
+//#define DISABLE_SIMPLIFIED
 //#define DISABLE_WEB_SERVER
 
 
@@ -699,7 +699,7 @@ class Spotify {
     /// @return response object containing http status code and reply
     response check_if_users_follow_playlist(const char* playlist_id, int size, const char** user_ids, JsonDocument filter = JsonDocument());
     #endif
-  #ifndef DISABLE_SIMPIFIED
+  #ifndef DISABLE_SIMPLIFIED
     /// @brief Get Current track name
     /// @return Current track name as String
     String current_track_name();
