@@ -73,7 +73,7 @@ To print the response you can use the ```print_response(response_obj)``` functio
 #define DISABLE_SHOWS
 #define DISABLE_TRACKS
 #define DISABLE_USER
-#define DISABLE_SIMPIFIED
+#define DISABLE_SIMPLIFIED
 #define DISABLE_WEB_SERVER
 ```
 - There are also some helper and some simplified functions. </br>
