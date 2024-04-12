@@ -56,10 +56,10 @@ namespace Spotify_types {
   extern const char* TIME_RANGE_LONG;
   extern const char* FOLLOW_TYPE_ARTIST;
   extern const char* FOLLOW_TYPE_USER;
-  constexpr size_t SIZE_OF_ID = 40; 
-  constexpr size_t SIZE_OF_URI = 50;
-  constexpr size_t SIZE_OF_SECRET_ID = 100;
-  constexpr size_t SIZE_OF_REFRESH_TOKEN = 300;
+  extern const size_t SIZE_OF_ID; 
+  extern const size_t SIZE_OF_URI;
+  extern const size_t SIZE_OF_SECRET_ID;
+  extern const size_t SIZE_OF_REFRESH_TOKEN;
 }
 
 /// @brief Response object containing http status code and reply

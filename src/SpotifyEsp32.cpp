@@ -8,10 +8,10 @@ namespace Spotify_types {
   const char* TYPE_ALBUM = "album";
   const char* TYPE_ARTIST = "artist";
   const char* TYPE_TRACK = "track";
-  const char* TYPE_PLAYLIST = "playlist";
   const char* TYPE_SHOW = "show";
   const char* TYPE_EPISODE = "episode";
   const char* TYPE_AUDIOBOOK = "audiobook";
+  const char* TYPE_PLAYLIST = "playlist";
   const char* TOP_TYPE_ARTIST = "artists";
   const char* TOP_TYPE_TRACKS = "tracks";
   const char* GROUP_ALBUM = "album";
@@ -23,6 +23,7 @@ namespace Spotify_types {
   const char* TIME_RANGE_LONG = "long_term";
   const char* FOLLOW_TYPE_ARTIST = "artist";
   const char* FOLLOW_TYPE_USER = "user";
+  const size_t SIZE_OF_ID = 40;
   const size_t SIZE_OF_URI = 50;
   const size_t SIZE_OF_SECRET_ID = 100;
   const size_t SIZE_OF_REFRESH_TOKEN = 300;
