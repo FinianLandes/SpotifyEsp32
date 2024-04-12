@@ -41,10 +41,10 @@ namespace Spotify_types {
   extern const char* TYPE_ALBUM;
   extern const char* TYPE_ARTIST;
   extern const char* TYPE_TRACK;
+  extern const char* TYPE_PLAYLIST;
   extern const char* TYPE_SHOW;
   extern const char* TYPE_EPISODE;
   extern const char* TYPE_AUDIOBOOK;
-  extern const char* TYPE_PLAYLIST;
   extern const char* TOP_TYPE_ARTIST;
   extern const char* TOP_TYPE_TRACKS;
   extern const char* GROUP_ALBUM;
