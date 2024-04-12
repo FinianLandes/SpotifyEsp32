@@ -23,9 +23,6 @@ namespace Spotify_types {
   const char* TIME_RANGE_LONG = "long_term";
   const char* FOLLOW_TYPE_ARTIST = "artist";
   const char* FOLLOW_TYPE_USER = "user";
-  const size_t SIZE_OF_URI = 50;
-  const size_t SIZE_OF_SECRET_ID = 100;
-  const size_t SIZE_OF_REFRESH_TOKEN = 300;
 }
 
 Spotify::Spotify(const char* client_id, const char* client_secret, int server_port, bool debug_on, int max_num_retry){
