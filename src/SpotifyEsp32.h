@@ -756,6 +756,8 @@ class Spotify {
     /// @return True if the request was successfull
     bool get_access_token();
     /// @brief Get refresh token from auth code
+    /// @param auth_code Auth code recieved by logging into Spotify
+    /// @param redirect_uri URI passed as redirect uri on the auth code request
     /// @return True if successfull
     bool get_refresh_token(const char* auth_code, const char* redirect_uri);
     /// @brief Destroy Object and free used memory
