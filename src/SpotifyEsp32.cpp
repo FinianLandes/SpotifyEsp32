@@ -143,7 +143,7 @@ void Spotify::server_on_refresh() {
         if(_debug_on){
           Serial.printf("Auth Code: %s\n", _auth_code);
         }
-        if(get_refresh_token()){
+        if(get_refresh_token(_auth_code, _redirect_uri)){
           char message[500];
           snprintf(message,sizeof(message), "Setup Complete, Refresh Token: %s <br>You can now close this page", _refresh_token);
           _server->send(200, "text/html", message);
@@ -210,7 +210,12 @@ void Spotify::begin(){
   _client.setTimeout(10000);
 }
 
-
+bool Spotify::has_access_token(){
+  return _access_token[0] == '\n';
+}
+bool Spotify::get_access_token(){
+  return get_token();
+}
 void Spotify::handle_client(){
   #ifndef DISABLE_WEB_SERVER
   _server->handleClient(); 
@@ -320,35 +325,32 @@ bool Spotify::token_base_req(String payload){
   _client.println(payload); 
   return true;
 }
-#ifndef DISABLE_WEB_SERVER
-  bool Spotify::get_refresh_token() {
-    Serial.println("Getting refresh token");
-    bool reply = false;
-    String payload = "grant_type=authorization_code&code=" + String(_auth_code) + "&redirect_uri=" + String(_redirect_uri)+ "callback";
-    if(!token_base_req(payload)){
-      _client.stop();
-      return false;
-    }
-    header_resp header_data = process_headers();
-
-    JsonDocument filter;
-    filter["refresh_token"] = true;
-    JsonDocument response = process_response(header_data, filter);
-    if(!response.isNull()){
-      Serial.println("Got refresh token");
-      reply = true;
-      strncpy(_refresh_token, response["refresh_token"].as<const char*>(), sizeof(_refresh_token));
-    }
-    if (_debug_on) {
-      Serial.printf("POST \"refresh token\" Status: %d \n", header_data.http_code);
-      Serial.print("Reply: ");
-      serializeJson(response, Serial);
-      Serial.println();
-    }
+bool Spotify::get_refresh_token(const char* auth_code, const char* redirect_uri) {
+  bool reply = false; 
+  String payload = "grant_type=authorization_code&code=" + String(auth_code) + "&redirect_uri=" + String(redirect_uri)+ "callback";
+  if(!token_base_req(payload)){
     _client.stop();
-    return reply;
+    return false;
   }
-#endif
+  header_resp header_data = process_headers();
+
+  JsonDocument filter;
+  filter["refresh_token"] = true;
+  JsonDocument response = process_response(header_data, filter);
+  if(!response.isNull()){
+    reply = true;
+    strncpy(_refresh_token, response["refresh_token"].as<const char*>(), sizeof(_refresh_token));
+  }
+  if (_debug_on) {
+    Serial.printf("POST \"refresh token\" Status: %d \n", header_data.http_code);
+    Serial.print("Reply: ");
+    serializeJson(response, Serial);
+    Serial.println();
+  }
+  _client.stop();
+  return reply;
+}
+
 bool Spotify::get_token() {
   bool reply = false;
   String payload = "grant_type=refresh_token&refresh_token=" + String(_refresh_token);

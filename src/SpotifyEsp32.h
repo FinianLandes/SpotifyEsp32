@@ -749,8 +749,18 @@ class Spotify {
     /// @brief Get the users Tokens
     /// @return a user_tokens object containig the id, secret and refresh_token
     user_tokens get_user_tokens();
+    /// @brief Checks wheter an access token has already been received
+    /// @return True if there is already an acess token
+    bool has_access_token();
+    /// @brief Gets an acess token
+    /// @return True if the request was successfull
+    bool get_access_token();
+    /// @brief Get refresh token from auth code
+    /// @return True if successfull
+    bool get_refresh_token(const char* auth_code, const char* redirect_uri);
     /// @brief Destroy Object and free used memory
     void end();
+    
 
   private:
   #ifndef DISABLE_WEB_SERVER
@@ -761,8 +771,6 @@ class Spotify {
     void server_on_response();
     /// @brief Refresh token login Page
     void server_on_refresh();
-    /// @brief Get refresh token from auth code
-    bool get_refresh_token();
     /// @brief Currying function for refresh login page
     friend std::function<void()> callback_fn_refresh(Spotify *spotify);
     /// @brief Currying function for root login page
