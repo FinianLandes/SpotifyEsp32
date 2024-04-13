@@ -143,7 +143,7 @@ void Spotify::server_on_refresh() {
         if(_debug_on){
           Serial.printf("Auth Code: %s\n", _auth_code);
         }
-        if(get_refresh_token(_auth_code, _redirect_uri)){
+        if(get_refresh_token(_auth_code, strcat(_redirect_uri, "callback"))){
           char message[500];
           snprintf(message,sizeof(message), "Setup Complete, Refresh Token: %s <br>You can now close this page", _refresh_token);
           _server->send(200, "text/html", message);
@@ -327,7 +327,7 @@ bool Spotify::token_base_req(String payload){
 }
 bool Spotify::get_refresh_token(const char* auth_code, const char* redirect_uri) {
   bool reply = false; 
-  String payload = "grant_type=authorization_code&code=" + String(auth_code) + "&redirect_uri=" + String(redirect_uri)+ "callback";
+  String payload = "grant_type=authorization_code&code=" + String(auth_code) + "&redirect_uri=" + String(redirect_uri);
   if(!token_base_req(payload)){
     _client.stop();
     return false;
