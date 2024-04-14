@@ -333,11 +333,14 @@ bool Spotify::get_refresh_token(const char* auth_code, const char* redirect_uri)
     return false;
   }
   header_resp header_data = process_headers();
-
+  if(header_data.http_code == -1){
+    _client.stop();
+    return false;
+  }
   JsonDocument filter;
   filter["refresh_token"] = true;
   JsonDocument response = process_response(header_data, filter);
-  if(!response.isNull()){
+  if(!response.isNull() && response.containsKey("refresh_token")){
     reply = true;
     strncpy(_refresh_token, response["refresh_token"].as<const char*>(), sizeof(_refresh_token));
   }
@@ -359,10 +362,14 @@ bool Spotify::get_token() {
     return false;
   }
   header_resp header_data = process_headers();
+  if(header_data.http_code == -1){
+    _client.stop();
+    return false;
+  }
   JsonDocument filter;
   filter["access_token"] = true;
   JsonDocument response = process_response(header_data, filter);
-  if(!response.isNull()){
+  if(!response.isNull() && response.containsKey("access_token")){
     reply = true;
     strncpy(_access_token, response["access_token"].as<const char*>(), sizeof(_access_token));
   }
@@ -417,18 +424,20 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
     Serial.printf("Filter: %s\n", filter.isNull() ? "Off" : "On");
   }
   if(!_client.connected() || header_data.content_type.indexOf("application/json") == -1){
-    String response_str;
-    if(_debug_on){
-      Serial.println("No JSON response");
-    }
+    String response_str = "";
     if(header_data.http_code == 204){
       response["message"] = "No Content";
+    }else if(!_client.connected()){
+      response["message"] = "Client got disconnected";
     }else{
       while (_client.connected() && recv_bytes < header_data.content_length){
         recv_bytes += _client.available();
         response_str += _client.readStringUntil('\n') + "\n";
       }
       response["message"] = response_str;
+    }
+    if(_debug_on){
+      serializeJsonPretty(response, Serial);
     }
     return response;
   }
