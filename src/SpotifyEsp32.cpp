@@ -436,9 +436,6 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
       }
       response["message"] = response_str;
     }
-    if(_debug_on){
-      serializeJsonPretty(response, Serial);
-    }
     return response;
   }
   while (recv_bytes < header_data.content_length){
