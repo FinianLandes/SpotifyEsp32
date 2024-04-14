@@ -207,7 +207,7 @@ void Spotify::begin(){
   }
   #endif
   _client.setCACert(_spotify_root_ca);
-  _client.setTimeout(10000);
+  _client.setTimeout(1000);
 }
 
 bool Spotify::has_access_token(){
@@ -263,6 +263,7 @@ response Spotify::RestApi(const char* rest_url, const char* type, int payload_si
   }
 
   header_resp header_data = process_headers();
+  response_obj.status_code = header_data.http_code;
   JsonDocument response = process_response(header_data, filter);
   if(_debug_on){
     Serial.printf("%s \"%s\" Status: %i\n", type, extract_endpoint(rest_url).c_str(), header_data.http_code);
@@ -280,17 +281,17 @@ response Spotify::RestApi(const char* rest_url, const char* type, int payload_si
         return RestApi(rest_url, type, payload_size, payload, filter);
       }else{
         deserializeJson(response_obj.reply, "Failed to get token");
+        response_obj.status_code = -1;
       }
     }
     else{
-      deserializeJson(response_obj.reply, response["error"]["message"].as<String>());
+      response_obj.reply = response;
     }
   }else{
     _client.stop();
     response_obj.reply = response;
   }
   
-  response_obj.status_code = header_data.http_code;
   return response_obj;
 }
 
@@ -353,7 +354,6 @@ bool Spotify::get_refresh_token(const char* auth_code, const char* redirect_uri)
   _client.stop();
   return reply;
 }
-
 bool Spotify::get_token() {
   bool reply = false;
   String payload = "grant_type=refresh_token&refresh_token=" + String(_refresh_token);
@@ -416,20 +416,21 @@ header_resp Spotify::process_headers(){
   }
   return response;
 }
-
 JsonDocument Spotify::process_response(header_resp header_data, JsonDocument filter){
   JsonDocument response;
   size_t recv_bytes = 0;
   if(_debug_on){
     Serial.printf("Filter: %s\n", filter.isNull() ? "Off" : "On");
   }
-  if(!_client.connected() || header_data.content_type.indexOf("application/json") == -1){
-    String response_str = "";
+  if(!_client.connected() || header_data.content_type.indexOf("application/json") == -1 || header_data.http_code == -1){
     if(header_data.http_code == 204){
       response["message"] = "No Content";
+    }else if(header_data.http_code == -1){
+      response["message"] = "Failed to receive headers";
     }else if(!_client.connected()){
       response["message"] = "Client got disconnected";
     }else{
+      String response_str = "";
       while (_client.connected() && recv_bytes < header_data.content_length){
         recv_bytes += _client.available();
         response_str += _client.readStringUntil('\n') + "\n";
@@ -456,6 +457,7 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
   }
   return response;
 }
+
 void Spotify::init_response(response* response_obj){
   response_obj -> status_code = -1;
   deserializeJson(response_obj -> reply, "If you see this, something went wrong");
