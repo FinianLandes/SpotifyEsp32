@@ -396,13 +396,15 @@ header_resp Spotify::process_headers(){
   unsigned long last_data_receive = millis();
   while (_client.connected()) {
     String line = _client.readStringUntil('\n');
-
     if (line != "") {
       last_data_receive = millis();
     } 
     else if (line == "" && millis() - last_data_receive > _timeout) {
       response.http_code = -1;
       response.error = "Timeout receiving headers";
+      if(_debug_on){
+        Serial.println("Timeout while receiving headers");
+      }
       break;
     }
 
