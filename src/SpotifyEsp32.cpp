@@ -391,36 +391,57 @@ header_resp Spotify::process_headers(){
   header_resp response;
   response.http_code = -1;
   response.content_length = 0;
+  response.error = "";
   bool can_break = false;
   unsigned long last_data_receive = millis();
   while (_client.connected()) {
     String line = _client.readStringUntil('\n');
+
     if (line != "") {
       last_data_receive = millis();
-    } else if (line == "" && millis() - last_data_receive > 500) {
+    } 
+    else if (line == "" && millis() - last_data_receive > _timeout) {
       response.http_code = -1;
-      return response;
+      response.error = "Timeout receiving headers";
+      break;
     }
+
+    // Parse HTTP response code
     if (line.startsWith("HTTP")) {
       response.http_code = line.substring(9, 12).toInt();
-    } else if(line.startsWith("Content-Type") || line.startsWith("content-type")){
+    } 
+    // Parse Content-Type
+    else if(line.startsWith("Content-Type") || line.startsWith("content-type")){
       response.content_type = line.substring(14);
-    }else if (line.startsWith("Content-Length") || line.startsWith("content-length")) {
+    }
+    // Parse Content-Length
+    else if (line.startsWith("Content-Length") || line.startsWith("content-length")) {
       response.content_length = line.substring(16).toInt();
       can_break = true;
     }
+
+    // If debug is on, print certain lines
     if(_debug_on){
       if (line.startsWith("HTTP") || line.startsWith("Content-Length") || line.startsWith("Content-Type")|| line.startsWith("content-length") || line.startsWith("content-type")){
         Serial.println(line);
       }
-    }else if(can_break){
+    }
+    // If can_break is true, find the end of headers and break
+    else if(can_break){
       _client.find("\r\n\r\n");
       break;
     }
+    // If line is a carriage return, indicating end of headers, break
     if (line == "\r") {
       break;
     }
   }
+
+  // If http_code is -1 and no error has been set, set a default error
+  if(response.http_code == -1 && response.error == ""){
+    response.error = "Client disconnected while receiving headers";
+  }
+
   return response;
 }
 JsonDocument Spotify::process_response(header_resp header_data, JsonDocument filter){
@@ -433,7 +454,7 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
     if(header_data.http_code == 204){
       response["message"] = "No Content";
     }else if(header_data.http_code == -1){
-      response["message"] = "Failed to receive headers";
+      response["message"] = header_data.error;
     }else if(!_client.connected()){
       response["message"] = "Client got disconnected";
     }else{

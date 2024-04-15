@@ -76,6 +76,7 @@ typedef struct{
   int http_code;
   size_t content_length;
   String content_type;
+  String error;
 } header_resp;
 /// @brief Recommendation object, used to create recommendations
 struct recommendations {
@@ -816,6 +817,8 @@ class Spotify {
     char _client_secret[100] = "";
     /// @brief Current number of retries
     int _retry;
+    /// @brief Timeout for HTTP etc. in Millisecods
+    int _timeout = 1000;
     /// @brief Debug mode
     bool _debug_on;
     /// @brief port
