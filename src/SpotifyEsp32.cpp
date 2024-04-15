@@ -392,8 +392,15 @@ header_resp Spotify::process_headers(){
   response.http_code = -1;
   response.content_length = 0;
   bool can_break = false;
+  unsigned long last_data_receive = millis();
   while (_client.connected()) {
     String line = _client.readStringUntil('\n');
+    if (line != "") {
+      last_data_receive = millis();
+    } else if (line == "" && millis() - last_data_receive > 500) {
+      response.http_code = -1;
+      return response;
+    }
     if (line.startsWith("HTTP")) {
       response.http_code = line.substring(9, 12).toInt();
     } else if(line.startsWith("Content-Type") || line.startsWith("content-type")){
