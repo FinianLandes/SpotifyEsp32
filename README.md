@@ -53,7 +53,7 @@ void connect_to_wifi(){
 4. If you want to set your tokens during runtime you can use the same code pass an empty char array to the constructor and set the tokens later in the webserver. By calling the "get_tokens" function you could then save these tokens with [SPIFFS](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/storage/spiffs.html). And during next runtime pass them from the memory. </br>
 5. Now you can use the library. </br>
 ## Usage
-- The normal functions return an response object. You can get the http code of type int with ```response_obj.status_code``` and the response message as JsonDocument with ```response_obj.reply```. </br>
+- The normal functions return an response object. You can get the http code or incase the token request failed and the request wasn't sent -1 with ```response_obj.status_code```. The response message can be obtained as JsonDocument with ```response_obj.reply```. </br>
 To print the response you can use the ```print_response(response_obj)``` function. </br>
 - To minimize RAM usage all functions making a GET request have an optional last parameter which is a filter JsonDocument which can be used to filter the response and only get the necessary data. Filtering works the following way: you pass a JsonDocument with the same structure than the response (This structure can be looked up in the Documentation of the Spotify Web API) where wanted data is just set to true and unwanted data is not included. Sadly there is no new tutorial for v7 of Arduino Json but the one of v6 is nearly identical except the definition of the JsonDocumet which can now be done in all cases like that: ```JsonDocument doc;``` [Filter tutorial](https://arduinojson.org/news/2020/03/22/version-6-15-0/)  </br>
 - To search for methods you can use the [Spotify Web API Reference](https://developer.spotify.com/documentation/web-api/reference/), all of the methods shown there are implemented </br>
@@ -105,17 +105,21 @@ To print the response you can use the ```print_response(response_obj)``` functio
 ```
 - You can also include the namespace: ```using namespace Spotify_types;```. These are some types used in the library eg. TYPES, SIZES of uris/ids </br>
 ### Other Functions
-If you want to get the tokens which you set during runtime to save them and reuse them you can call the ```get_user_tokens()``` function, this function returns a ```user_tokens``` object which contains: ```client_id```,```client_secret``` and the ```refresh_token```. </br>
+- If you want to get the tokens which you set during runtime to save them and reuse them you can call the ```get_user_tokens()``` function, this function returns a ```user_tokens``` object which contains: ```client_id```,```client_secret``` and the ```refresh_token```. </br>
+- To make a request the library automatically gets a new access token if there is no access token or the access token is expired. So if you want to already do that before making a request, e.g. in ```Setup()``` you can do that by calling sp.```get_token()``` this will return true if the token was obtained successfully. To check whether there is already a access token you can call ```has_access_token()```. But as said this is Optional, the library does that on its own.</br>
+- If you want to use a different webserver library to obtain the refresh token you can disable the webserver functionality and the use ```get_refresh_token(const char* auth_code,const char* redirect uri)``` to get the refresh token by passing your obtained auth code and redirect uri. </br>
 ## Useful Information
 Due to the Wifi and HTTPS this library is quite big, so i recommend setting the partitions table of your esp to use more than the default 1.2MB of flash as most esp32's have 4MB of which the biggest part is set for SPIFFS which in most cases isn't used. Here are some tutorials about setting the partitions table of your esp: </br>
 - [Official Espressif Documentation](https://espressif-docs.readthedocs-hosted.com/projects/arduino-esp32/en/latest/tutorials/partition_table.html?highlight=partitions)</br>
 - [Partition Table in the Arduino IDE](https://robotzero.one/arduino-ide-partitions/)</br>
 - [Partition Table in Platform IO](https://docs.platformio.org/en/latest/platforms/espressif32.html)</br>
+If you don't want or can do that you can also disable some endpoints and the webserver functionality to reduce the size of the library. </br>
 ## Trouble Shooting
-- If you have any problems with the library you can use the debug mode to print out the data to the serial monitor. I recommend not setting the baud rate lower than 115200 as the data printed can be quite large which can lead to crash if the Serial communication is too slow. </br>
+- If you have any problems with the library you can use the debug mode to print out the data to the serial monitor. This can be done by passing true to the constructor of the library as additional parameter.</br>
+-If requests fail there will be some information in the response message. </br>
 - If you have any problems with the library you can also use the [Spotify Web API Console](https://developer.spotify.com/console/) to test the endpoints. </br>
 - If there are still issues you can open an issue on this repository. </br>
 ## Working Devices
 - ESP32 WROOM</br>
-- Should also work on other ESP32 models(Untested).</br>
+- Should also work on other ESP32 models.</br>
 - For now it probably uses too much flash and memory to run on a standard ESP2866
