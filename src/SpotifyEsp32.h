@@ -143,7 +143,6 @@ class Spotify {
     /// @param max_num_retry Max number of retries for a request(default 3)
     Spotify(const char* client_id, const char* client_secret, int server_port = 80, bool debug_on = false, int max_num_retry = 3);
     /// @brief Constructor for Spotify object with refresh token
-    /// @param server Your WebServer
     /// @param client_id Client id from Spotify, if you want to set it during runtime provide an empty char* with enough space 
     /// @param client_secret Client secret from Spotify,if you want to set it during runtime provide an empty char* with enough space 
     /// @param refresh_token Refresh token from Spotify, if you want to set it during runtime provide an empty char* with enough space 
