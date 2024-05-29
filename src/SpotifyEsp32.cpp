@@ -1529,6 +1529,16 @@ response Spotify::check_if_users_follow_playlist(const char* playlist_id, int si
 #endif
 //Simplified functions, formatting functions
 #ifndef DISABLE_SIMPLIFIED
+String Spotify::get_current_album_image_url(int image_int){
+    String album_url = "Something went wrong";
+    JsonDocument filter;
+    filter["item"]["album"]["images"][image_int]["url"] = true;
+    response data = currently_playing(filter);
+    if(valid_http_code(data.status_code) && !data.reply.isNull()){
+      album_url = data.reply["item"]["album"]["images"][image_int]["url"].as<String>();
+    }
+    return album_url;
+}
 String Spotify::current_track_name(){
   String track_name = "Something went wrong";
   JsonDocument filter;

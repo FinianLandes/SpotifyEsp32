@@ -734,6 +734,10 @@ class Spotify {
     /// @brief Get if it is possible to modify volume on current device
     /// @return true if it is possible to modify volume on current device
     bool volume_modifyable();
+  /// @brief Get current album cover link
+    /// @param int image array position
+    /// @return Current album cover link as String
+    String get_current_album_image_url(int image_int);
     #endif
     /// @brief Convert ID to URI
     /// @param id ID to convert
