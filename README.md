@@ -101,7 +101,9 @@ To print the response you can use the ```print_response(response_obj)``` functio
     //Convert a context id to a uri and return it as a char
     char convert_id_to_uri(char* id, char* type);
     //Convert a context id to a uri and return it as a pointer to the char
-    char* convert_id_to_uri(char* id, char* type, char* uri); 
+    char* convert_id_to_uri(char* id, char* type, char* uri);
+    //get current album url
+    string get_current_album_image_url(int image_int);
 ```
 - You can also include the namespace: ```using namespace Spotify_types;```. These are some types used in the library eg. TYPES, SIZES of uris/ids </br>
 ### Other Functions
