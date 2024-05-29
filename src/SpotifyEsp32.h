@@ -230,6 +230,10 @@ class Spotify {
     response add_to_queue(const char* context_uri);
     #endif
   #ifndef DISABLE_ALBUM
+    /// @brief Get current album cover link
+    /// @param int image array position
+    /// @return Current album cover link as String
+    String get_current_album_image_url(int image_int);
     /// @brief Get Spotify information for a single album.
     /// @param album_id Spotify ID of the album
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
