@@ -118,7 +118,7 @@ Due to the Wifi and HTTPS this library is quite big, so i recommend setting the 
 If you don't want or can do that you can also disable some endpoints and the webserver functionality to reduce the size of the library. </br>
 ## Trouble Shooting
 - If you have any problems with the library you can use the debug mode to print out the data to the serial monitor. This can be done by passing true to the constructor of the library as additional parameter.</br>
--If requests fail there will be some information in the response message. </br>
+- If requests fail there will be some information in the response message. </br>
 - If you have any problems with the library you can also use the [Spotify Web API Console](https://developer.spotify.com/console/) to test the endpoints. </br>
 - If there are still issues you can open an issue on this repository. </br>
 ## Working Devices
