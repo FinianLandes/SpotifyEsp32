@@ -3,7 +3,7 @@ This library is a wrapper for the [Spotify Web API](https://developer.spotify.co
 
 ## Dependencies
 - [ArduinoJson](https://arduinojson.org/) </br>
-- [WifiClientSecure](https://github.com/espressif/arduino-esp32/tree/master/libraries/WiFiClientSecure) </br>
+- [NetworkClientSecure(Depending on Platform WifiClientSecure as NetworkClientSecure is not yet supported)](https://github.com/espressif/arduino-esp32/tree/master/libraries/NetworkClientSecure) </br>
 - [base64](https://github.com/Densaugeo/base64_arduino) </br>
 - [WebServer](https://github.com/espressif/arduino-esp32/blob/master/libraries/WebServer/src/WebServer.h) (Optional) </br>
 
