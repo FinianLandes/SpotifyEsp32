@@ -17,11 +17,10 @@
 //#define DISABLE_USER
 //#define DISABLE_SIMPLIFIED
 //#define DISABLE_WEB_SERVER
-#ifdef PLATFORMIO
+
+
 #include <WiFiClientSecure.h>
-#else
-#include <NetworkClientSecure.h>
-#endif
+
 
 #include <ArduinoJson.h>
 #include <base64.h>
@@ -792,11 +791,7 @@ class Spotify {
     void* _server;
   #endif
     /// @brief HTTPS client
-    #ifdef PLATFORMIO
     WiFiClientSecure _client;
-    #else
-    NetworkClientSecure _client;
-    #endif
     /// @brief Host for Tokens
     const char* _host = "api.spotify.com";
     /// @brief Base url for API requests
