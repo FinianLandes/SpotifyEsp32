@@ -18,10 +18,8 @@
 //#define DISABLE_SIMPLIFIED
 //#define DISABLE_WEB_SERVER
 
-
+#include <WiFi.h>
 #include <WiFiClientSecure.h>
-
-
 #include <ArduinoJson.h>
 #include <base64.h>
 
