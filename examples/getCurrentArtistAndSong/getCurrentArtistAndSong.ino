@@ -10,6 +10,10 @@ In this example your current track will be printed to the serial and as soon as 
     edited by: Sascha Seidel
         * added getting artist and trackname to print it Serial
 
+    11.10.2025
+    edited by: Finian Landes
+        * Updated login to work with version 3.x.x
+
     Documentation: https://github.com/FinianLandes/Spotify_Esp32
 */
 // Include the required libraries
@@ -28,12 +32,15 @@ Spotify sp(CLIENT_ID, CLIENT_SECRET);
 void setup() {
     Serial.begin(115200);
     connect_to_wifi();
+
+    // Uncomment following line if you want to enable debugging:
+    // sp.set_log_level(SPOTIFY_LOG_DEBUG);
     
     sp.begin();
     while(!sp.is_auth()){
         sp.handle_client();
     }
-    Serial.println("Authenticated");
+    Serial.printf("Authenticated! Refresh token: %s\n", sp.get_user_tokens().refresh_token);
 }
 
 void loop() {
