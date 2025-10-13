@@ -1,5 +1,8 @@
 #include "SpotifyEsp32.h"
-namespace Spotify_types {
+
+spotify_log_level_t _spotify_log_level = SPOTIFY_LOG_INFO;
+
+namespace spotify_types {
   bool SHUFFLE_ON = true;
   bool SHUFFLE_OFF = false;
   const char* REPEAT_OFF = "off";
@@ -25,189 +28,175 @@ namespace Spotify_types {
   const char* FOLLOW_TYPE_USER = "user";
 }
 
-Spotify::Spotify(const char* client_id, const char* client_secret, int server_port, bool debug_on, int max_num_retry){
+Spotify::Spotify(const char* client_id, const char* client_secret, int max_num_retry){
+  _spotify_log_level = SPOTIFY_LOG_NONE;
   _retry = 0;
   if(!(client_id && client_secret)){
     _no_credentials = true;
   }else{
-    strncpy(_client_id, client_id,sizeof(_client_id));
-    strncpy(_client_secret, client_secret,sizeof(_client_secret));
+    strncpy(_client_id, client_id, sizeof(_client_id));
+    strncpy(_client_secret, client_secret, sizeof(_client_secret));
   }
-  _port = server_port;
-  _debug_on = debug_on;
-  if(max_num_retry>0){
-    _max_num_retry = max_num_retry;
-  }
-  else{
-    _max_num_retry = 1;
-  }
-  #ifndef DISABLE_WEB_SERVER
-  _server = new WebServer(server_port);
-  #else
-  _server = nullptr;
-  #endif
-}
-
-Spotify::Spotify(const char* client_id, const char* client_secret, const char* refresh_token, int server_port,bool debug_on, int max_num_retry){
-  _retry = 0;
-  if(!(client_id && client_secret && refresh_token)){
-    _no_credentials = true;
-  }else{
-    strncpy(_client_id, client_id,sizeof(_client_id));
-    strncpy(_client_secret, client_secret,sizeof(_client_secret));
-    strncpy(_refresh_token, refresh_token,sizeof(_refresh_token));
-  }
-  _debug_on = debug_on;
-  _port = server_port;
   if(max_num_retry > 0){
     _max_num_retry = max_num_retry;
   }
   else{
     _max_num_retry = 1;
   }
-  #ifndef DISABLE_WEB_SERVER
-  _server = new WebServer(server_port);
-  #else
-  _server = nullptr;
-  #endif
+}
+Spotify::Spotify(const char* client_id, const char* client_secret, const char* refresh_token, int max_num_retry){
+  _spotify_log_level = SPOTIFY_LOG_NONE;
+  _retry = 0;
+  if(!(client_id && client_secret && refresh_token)){
+    _no_credentials = true;
+  }else{
+    strncpy(_client_id, client_id, sizeof(_client_id));
+    strncpy(_client_secret, client_secret, sizeof(_client_secret));
+    strncpy(_refresh_token, refresh_token, sizeof(_refresh_token));
+  }
+  if(max_num_retry > 0){
+    _max_num_retry = max_num_retry;
+  }
+  else{
+    _max_num_retry = 1;
+  }
 }
 Spotify::~Spotify(){
-  #ifndef DISABLE_WEB_SERVER
-    delete _server;
-  #endif
-  if(_debug_on){
-    Serial.println("Object Destructed");
-  }
+  SPOTIFY_LOGI(_TAG, "Object Destructed");
 }
-//Login Webserver Functions
-#ifndef DISABLE_WEB_SERVER
-std::function<void()> callback_fn_refresh(Spotify *spotify) {
-  return [spotify]() {
-        if(spotify->_server != nullptr)
-        return spotify->server_on_refresh();
-    };
-};
-std::function<void()> callback_fn_root(Spotify *spotify) {
-  return [spotify]() {
-        if(spotify->_server != nullptr)
-        return spotify->server_on_root();
-    };
-};
-std::function<void()> callback_fn_response(Spotify *spotify) {
-  return [spotify]() {
-        if(spotify->_server != nullptr)
-        return spotify->server_on_response();
-    };
-};
-void Spotify::server_on_root() {
-  if((strcmp(_client_id, "") == 0 || !_client_id || strcmp(_client_secret, "") == 0 || !_client_secret)){
-    _server->send(200,"text/html", String(_credentials_input));
-  }else{
-    _server->sendHeader("Location", String(_redirect_uri)+"callback");
-    _server->send(302, "text/plain", "");
-  }
+void Spotify::end(){
+  delete this;
 }
-void Spotify::server_on_response(){
-  if(_server->args() != 0){
-    if(_server->hasArg("id")){
-      strncpy(_client_id, _server->arg("id").c_str(), sizeof(_client_id));
-    }
-    if(_server->hasArg("secret")){
-      strncpy(_client_secret, _server->arg("secret").c_str(), sizeof(_client_secret));
-    }
-    if(_server->hasArg("token")){
-      strncpy(_refresh_token, _server->arg("token").c_str(), sizeof(_refresh_token));
-    }
-    if (strcmp(_refresh_token, "") != 0) {
-      _server->send(200, "text/html", "Credentials successfully set!");
-      _server->stop();
-    } else if (strcmp(_refresh_token, "") == 0) {
-      _server->sendHeader("Location", String(_redirect_uri)+"callback");
-      _server->send(302, "text/plain", "");
-    }
-  }else{
-    _server->send(200, "test/html", "Something went wrong, please try again");
-  }
+
+void Spotify::set_log_level(spotify_log_level_t spotify_log_level){
+  _spotify_log_level = spotify_log_level;
+  SPOTIFY_LOGI(_TAG, "Spotify logging set to (level %d)", spotify_log_level);
 }
-void Spotify::server_on_refresh() {
-  if (strcmp(_refresh_token, "") == 0 || !_refresh_token) {
-    if (_server->args() == 0) {
-      char page[900];
-      char redirect_callback[150];
-      snprintf(redirect_callback, sizeof(redirect_callback),"%scallback", _redirect_uri);
-      snprintf(page,sizeof(page),_login_page, _client_id, redirect_callback);
-      _server->send(200, "text/html", String(page));
+void Spotify::begin() {
+  SPOTIFY_LOGI(_TAG, "Initializing Spotify client...");
+  if (!is_auth()) {
+    get_random_state(_random_state, _state_len);
+    SPOTIFY_LOGD(_TAG, "Generated random state: %s", _random_state);
+
+    const char* scopes;
+    if (_custom_scopes && strlen(_custom_scopes) > 0) {
+      scopes = _custom_scopes;
+      SPOTIFY_LOGD(_TAG, "Using custom scopes");
     } else {
-      if (_server->hasArg("code")) {
-        strncpy(_auth_code, _server->arg("code").c_str(), sizeof(_auth_code));
-        if(_debug_on){
-          Serial.printf("Auth Code: %s\n", _auth_code);
+      scopes = "ugc-image-upload user-read-playback-state user-modify-playback-state user-read-currently-playing app-remote-control streaming playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public user-follow-modify user-follow-read user-read-playback-position user-top-read user-read-recently-played user-library-read user-library-modify user-read-email user-read-private";
+      SPOTIFY_LOGD(_TAG, "Using default scopes: all");
+    }
+
+    char url[1024];
+    snprintf(url, sizeof(url),"https://accounts.spotify.com/authorize" "?client_id=%s" "&response_type=code" "&redirect_uri=%s" "&scope=%s" "&state=%s", _client_id, _redirect_uri, scopes,_random_state);
+
+    Serial.println("Open this URL in your browser to authorize:");
+    Serial.println(url);
+  }
+  SPOTIFY_LOGD(_TAG, "Setting Spotify CA certificate & Timeout");
+  _client.setCACert(_spotify_root_ca);
+  _client.setTimeout(_timeout);
+  SPOTIFY_LOGI(_TAG, "Spotify client initialized.");
+  if (is_auth()){
+    get_token();
+  }
+}
+void Spotify::handle_client() {
+  static unsigned long start_time = 0;
+  static bool connecting = false;
+  static size_t pos = 0;
+  static bool headers_parsed = false;
+  static size_t content_length = 0;
+  static char buffer[2048];
+
+  if (!connecting) {
+    SPOTIFY_LOGD(_TAG, "Starting connection to host: %s", _auth_host);
+
+    _client.setInsecure();
+    if (!_client.connect(_auth_host, 443)) {
+      SPOTIFY_LOGE(_TAG, "Connection to host failed!");
+      return;
+    }
+
+    char path[128];
+    snprintf(path, sizeof(path), "/api/spotify/get_code?state=%s", _random_state);
+    _client.print("GET ");
+    _client.print(path);
+    _client.print(" HTTP/1.1\r\nHost: ");
+    _client.print(_auth_host);
+    _client.print("\r\nConnection: close\r\n\r\n");
+
+    connecting = true;
+    start_time = millis();
+    pos = 0;
+    headers_parsed = false;
+    content_length = 0;
+    return;
+  }
+
+  if (millis() - start_time > _timeout) {
+    SPOTIFY_LOGD(_TAG, "Timeout reached, stopping client.");
+    _client.stop();
+    _client.setCACert(_spotify_root_ca);
+    connecting = false;
+    return;
+  }
+
+  while (_client.available() && pos < sizeof(buffer) - 1) {
+    buffer[pos++] = _client.read();
+  }
+
+  if (!_client.connected() && pos > 0) {
+    buffer[pos] = '\0';
+
+    char* body_start = strstr(buffer, "\r\n\r\n");
+    if (!body_start) {
+      SPOTIFY_LOGE(_TAG, "Body start couldn't be found, stopping client.");
+      _client.stop();
+      _client.setCACert(_spotify_root_ca);
+      connecting = false;
+      return;
+    }
+    body_start += 4;
+
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, body_start);
+    if (err) {
+      SPOTIFY_LOGE(_TAG, "Deserialization failed: %s", err.c_str());
+    } else {
+      const char* code = doc["code"];
+      if (code && strlen(code) > 0) {
+        strncpy(_auth_code, code, sizeof(_auth_code)-1);
+        _auth_code[sizeof(_auth_code)-1] = '\0';
+        SPOTIFY_LOGD(_TAG, "Auth code received: %s", _auth_code);
+        get_refresh_token(_auth_code, _redirect_uri);
+        if (is_auth()){
+          get_token();
         }
-        if(get_refresh_token(_auth_code, strcat(_redirect_uri, "callback"))){
-          char message[500];
-          snprintf(message,sizeof(message), "Setup Complete, Refresh Token: %s <br>You can now close this page", _refresh_token);
-          _server->send(200, "text/html", message);
-        }
-        else{
-          _server->send(200, "text/html", "Something went wrong, please try again");
-        }
-        _server->stop();
       } else {
-        char page[900];
-        snprintf(page,sizeof(page),_login_page, _client_id, _redirect_uri);
-        _server->send(200, "text/html", String(page));
+        SPOTIFY_LOGD(_TAG, "Code was empty or null");
       }
     }
-  } else {
-    _server->send(200, "text/html", "Spotify setup complete");
-    _server->stop();
+    _client.stop();
+    _client.setCACert(_spotify_root_ca);
+    connecting = false;
   }
 }
-void Spotify::server_routes(){
-  _server->on("/", HTTP_GET, [this](){
-    if(_debug_on){
-      Serial.println("Send response to root");
-    }
-    auto root = callback_fn_root(this);
-    root();
-  });
-  _server->on("/callback", HTTP_GET, [this](){
-    if(_debug_on){
-      Serial.println("Send response to Callback");
-    }
-    auto refresh = callback_fn_refresh(this);
-    refresh();
-  });
-  
-  _server->on("/get", HTTP_GET, [this](){
-    if(_debug_on){
-      Serial.println("Receive credentials from root");
-    }
-    auto response = callback_fn_response(this);
-    response();
-  });
-  _server->begin();
-  if(_debug_on){
-    Serial.println("Server started");
-  }
+
+void Spotify::set_scopes(const char* scopes) {
+  _custom_scopes = scopes;
 }
-#endif
-void Spotify::begin(){ 
-  #ifndef DISABLE_WEB_SERVER
-  if(!is_auth()){
-    if(_port == 80){
-      snprintf(_redirect_uri,sizeof(_redirect_uri), "http://%s/", WiFi.localIP().toString().c_str());
-      Serial.printf("Go to this url in your Browser to login to spotify or enter your credentials: %s\n", _redirect_uri);
-    }
-    else{
-      snprintf(_redirect_uri,sizeof(_redirect_uri), "http://%s:%d/", WiFi.localIP().toString().c_str(), _port);
-      Serial.printf("Go to this url in your Browser to login to spotify or enter your credentials: %s\n", _redirect_uri);
-    }
-    server_routes();
+void Spotify::get_random_state(char* state, size_t len){
+  const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const char prefix[] = "ESP32-";
+  size_t prefix_len = strlen(prefix);
+  strcpy(state, prefix);
+  size_t max_random = len - prefix_len;
+  for (size_t i = 0; i < max_random; i++) {
+    int key = esp_random() % (sizeof(charset) - 1);
+    state[prefix_len + i] = charset[key];
   }
-  #endif
-  _client.setCACert(_spotify_root_ca);
-  _client.setTimeout(1000);
+  state[prefix_len + max_random] = '\0';
 }
 
 bool Spotify::has_access_token(){
@@ -216,26 +205,21 @@ bool Spotify::has_access_token(){
 bool Spotify::get_access_token(){
   return get_token();
 }
-void Spotify::handle_client(){
-  #ifndef DISABLE_WEB_SERVER
-  _server->handleClient(); 
-  #endif
-}
-void Spotify::end(){
-  delete this;
-}
 bool Spotify::is_auth(){
-  return !(strcmp(_refresh_token, "") == 0 || !_refresh_token || strcmp(_client_id, "") == 0 || !_client_id || strcmp(_client_secret, "") == 0 || !_client_secret);
+  return !(strcmp(_refresh_token, "") == 0 || !_refresh_token || strcmp(_client_id, "") == 0 || !_client_id);
 }
 //Basic functions
 response Spotify::RestApi(const char* rest_url, const char* type, int payload_size, const char* payload, JsonDocument filter){
   response response_obj;
   init_response(&response_obj);
 
+  _client.stop();
   if (!_client.connect(_host, 443)) {
+    SPOTIFY_LOGE(_TAG, "Connection failed");
     deserializeJson(response_obj.reply ,"Connection failed");
     return response_obj;
   }
+  SPOTIFY_LOGV(_TAG, "Creating %s request to %s", type, rest_url);
   _client.println(String(type) + " " + String(rest_url) + " HTTP/1.1");
   _client.println("Host: " + String(_host));
   _client.println("User-Agent: ESP32");
@@ -247,39 +231,48 @@ response Spotify::RestApi(const char* rest_url, const char* type, int payload_si
   if(strcmp(type, "GET") == 0){
     _client.println();
   }
-  else if(strcmp(type, "PUT") == 0){
+  else if((strcmp(type, "PUT") == 0 || strcmp(type, "POST") == 0 || strcmp(type, "DELETE") == 0)){
+    SPOTIFY_LOGV(_TAG, "Sending payload %s with size %i ", payload ? payload: "NULL", payload_size);
     _client.println("Content-Length: " + String(payload_size));
     _client.println();
-    _client.println(payload);
+    if (payload_size > 0 && payload != nullptr){
+      if (_client.write((const uint8_t*)payload, payload_size) != payload_size) {
+        SPOTIFY_LOGE(_TAG, "Failed to send payload");
+        deserializeJson(response_obj.reply, "Payload send failed");
+        response_obj.status_code = -1;
+        _client.stop();
+        return response_obj;
+      }
+    }
   }
-  else if(strcmp(type, "POST") == 0){
-    _client.println("Content-Length: " + String(payload_size));
-    _client.println();
-    _client.println(payload);
-  }
-  else if(strcmp(type, "DELETE") == 0){
-    _client.println();
-    _client.println(payload);
-  }
-
+  _client.flush();
   header_resp header_data = process_headers();
   response_obj.status_code = header_data.http_code;
-  JsonDocument response = process_response(header_data, filter);
-  if(_debug_on){
-    Serial.printf("%s \"%s\" Status: %i\n", type, extract_endpoint(rest_url).c_str(), header_data.http_code);
-    Serial.print("Reply: ");
-    serializeJson(response, Serial);
-    Serial.println();
+  SPOTIFY_LOGV(_TAG, "Header Data: Code %i, Content of length %i and type %s, Error: %s", header_data.http_code, header_data.content_length, header_data.content_type.c_str(), header_data.error.c_str());
+
+  String str_response;
+  JsonDocument response;
+  if (!valid_http_code(header_data.http_code)){
+    response = process_response(header_data);
+  }else{
+    response = process_response(header_data, filter);
   }
-  
+  serializeJson(response, str_response);
+
+  SPOTIFY_LOGD(_TAG, "%s \"%s\" Status: %i", type, extract_endpoint(rest_url).c_str(), header_data.http_code);
+  SPOTIFY_LOGD(_TAG, "Reply: %s", str_response.c_str());
+
   if(_retry <= _max_num_retry && !valid_http_code(header_data.http_code)){
-    _client.stop();
+    SPOTIFY_LOGD(_TAG, "Retrying");
     String message = response["error"]["message"].as<String>();
     _retry++;
     if(message == "Only valid bearer authentication supported"){
+      _client.stop();
+      SPOTIFY_LOGV(_TAG, "Trying to get new access token");
       if(get_token()){
         return RestApi(rest_url, type, payload_size, payload, filter);
       }else{
+        SPOTIFY_LOGE(_TAG, "Failed to get new access token");
         deserializeJson(response_obj.reply, "Failed to get token");
         response_obj.status_code = -1;
       }
@@ -288,97 +281,117 @@ response Spotify::RestApi(const char* rest_url, const char* type, int payload_si
       response_obj.reply = response;
     }
   }else{
-    _client.stop();
     response_obj.reply = response;
   }
-  
+  _client.stop();
+  _retry = 0;
   return response_obj;
 }
-
-response Spotify::RestApiPut(const char* rest_url,int payload_size, const char* payload){
+response Spotify::RestApiPut(const char* rest_url, int payload_size, const char* payload){
   return RestApi(rest_url, "PUT", payload_size, payload);
 }
 response Spotify::RestApiGet(const char* rest_url, JsonDocument filter){
   return RestApi(rest_url, "GET", 0, "", filter);
 }
-response Spotify::RestApiPost(const char* rest_url,int payload_size, const char* payload){
+response Spotify::RestApiPost(const char* rest_url, int payload_size, const char* payload){
   return RestApi(rest_url, "POST", payload_size, payload);
 }
-response Spotify::RestApiDelete(const char* rest_url, const char* payload){
-  return RestApi(rest_url, "DELETE", 0, payload);
+response Spotify::RestApiDelete(const char* rest_url, int payload_size, const char* payload){
+  return RestApi(rest_url, "DELETE", payload_size, payload);
 }
 
-bool Spotify::token_base_req(String payload){
+bool Spotify::token_base_req(const char* payload, size_t payload_len){
   if (!_client.connect(_token_host, 443)) {
+    SPOTIFY_LOGE(_TAG, "Faild to connect to host for token request");
     return false;
   }
-  String authorization = String(_client_id) + ":" + String(_client_secret);
-  authorization.trim();
-  authorization = "Basic " + base64::encode(authorization);
+  char auth_raw[128];
+  snprintf(auth_raw, sizeof(auth_raw), "%s:%s", _client_id, _client_secret);
+  char auth_base64[192];
+  size_t out_len = 0;
+  int ret = mbedtls_base64_encode((unsigned char*)auth_base64, sizeof(auth_base64), &out_len, (const unsigned char*)auth_raw, strlen(auth_raw));
+  auth_base64[strlen(auth_base64)] = '\0';
+
   _client.println("POST /api/token HTTP/1.1");
   _client.println("Host: " + String(_token_host));
   _client.println("User-Agent: ESP32");
   _client.println("Connection: close");
   _client.println("Content-Type: application/x-www-form-urlencoded");
-  _client.println("Authorization: " + authorization);
-  _client.println("Content-Length: " + String(payload.length()));
+  _client.print("Authorization: Basic ");
+  _client.println(auth_base64);
+  _client.print("Content-Length: ");
+  _client.println((int)payload_len);
   _client.println();
-  _client.println(payload); 
+  _client.write((const uint8_t*)payload, payload_len);
+  _client.println();
+  _client.flush();
   return true;
 }
 bool Spotify::get_refresh_token(const char* auth_code, const char* redirect_uri) {
-  bool reply = false; 
-  String payload = "grant_type=authorization_code&code=" + String(auth_code) + "&redirect_uri=" + String(redirect_uri);
-  if(!token_base_req(payload)){
+  bool reply = false;
+  char payload[1024];
+  snprintf(payload, sizeof(payload), "grant_type=authorization_code&code=%s&redirect_uri=%s", auth_code, redirect_uri);
+
+  if (!token_base_req(payload, strlen(payload))) {
+    SPOTIFY_LOGE(_TAG, "Refresh token connection failed");
     _client.stop();
     return false;
   }
+
   header_resp header_data = process_headers();
-  if(header_data.http_code == -1){
+  if (header_data.http_code == -1) {
     _client.stop();
+    SPOTIFY_LOGE(_TAG, "Refresh token header processing failed");
     return false;
   }
+
   JsonDocument filter;
   filter["refresh_token"] = true;
   JsonDocument response = process_response(header_data, filter);
-  if(!response.isNull() && response.containsKey("refresh_token")){
+
+  if (!response.isNull() && !response["refresh_token"].isNull()) {
     reply = true;
     strncpy(_refresh_token, response["refresh_token"].as<const char*>(), sizeof(_refresh_token));
+    _refresh_token[sizeof(_refresh_token) - 1] = '\0';
   }
-  if (_debug_on) {
-    Serial.printf("POST \"refresh token\" Status: %d \n", header_data.http_code);
-    Serial.print("Reply: ");
-    serializeJson(response, Serial);
-    Serial.println();
-  }
+  String str_response;
+  serializeJson(response, str_response);
+  SPOTIFY_LOGD(_TAG, "POST \"refresh token\" Status: %i", header_data.http_code);
+  SPOTIFY_LOGD(_TAG, "Reply: %s", str_response.c_str());
+
   _client.stop();
   return reply;
 }
 bool Spotify::get_token() {
   bool reply = false;
-  String payload = "grant_type=refresh_token&refresh_token=" + String(_refresh_token);
-  if(!token_base_req(payload)){
+  char payload[860];
+  int written = snprintf(payload, sizeof(payload), "grant_type=refresh_token&refresh_token=%s", _refresh_token);
+  if (written < 0 || written >= (int)sizeof(payload)) {
+    return false;
+  }
+
+  if (!token_base_req(payload, strlen(payload))) {    
+    SPOTIFY_LOGE(_TAG, "Access token connection failed");
     _client.stop();
     return false;
   }
   header_resp header_data = process_headers();
   if(header_data.http_code == -1){
+    SPOTIFY_LOGE(_TAG, "Access token invalid or empty headers received");
     _client.stop();
     return false;
   }
   JsonDocument filter;
   filter["access_token"] = true;
   JsonDocument response = process_response(header_data, filter);
-  if(!response.isNull() && response.containsKey("access_token")){
+  if(!response.isNull() && !response["access_token"].isNull()){
     reply = true;
     strncpy(_access_token, response["access_token"].as<const char*>(), sizeof(_access_token));
   }
-  if (_debug_on) {
-    Serial.printf("POST \"acces token\" Status: %d \n", header_data.http_code);
-    Serial.print("Reply: ");
-    serializeJson(response, Serial);
-    Serial.println();
-  }
+  String str_response;
+  serializeJson(response, str_response);
+  SPOTIFY_LOGD(_TAG, "POST \"access token\" Status: %i", header_data.http_code);
+  SPOTIFY_LOGD(_TAG, "Reply: %s", str_response.c_str());
   _client.stop();
   return reply;
 }
@@ -386,8 +399,7 @@ bool Spotify::get_token() {
 bool Spotify::valid_http_code(int code){
   return (code >= 200 && code <= 299);
 }
-
-header_resp Spotify::process_headers(){
+header_resp Spotify::process_headers() {
   header_resp response;
   response.http_code = -1;
   response.content_length = 0;
@@ -402,11 +414,10 @@ header_resp Spotify::process_headers(){
     else if (line == "" && millis() - last_data_receive > _timeout) {
       response.http_code = -1;
       response.error = "Timeout receiving headers";
-      if(_debug_on){
-        Serial.println("Timeout while receiving headers");
-      }
+      SPOTIFY_LOGE(_TAG, "Timeout while receiving headers");
       break;
     }
+    SPOTIFY_LOGV(_TAG, "Header: %s", line.c_str());
 
     // Parse HTTP response code
     if (line.startsWith("HTTP")) {
@@ -420,13 +431,6 @@ header_resp Spotify::process_headers(){
     else if (line.startsWith("Content-Length") || line.startsWith("content-length")) {
       response.content_length = line.substring(16).toInt();
       can_break = true;
-    }
-
-    // If debug is on, print certain lines
-    if(_debug_on){
-      if (line.startsWith("HTTP") || line.startsWith("Content-Length") || line.startsWith("Content-Type")|| line.startsWith("content-length") || line.startsWith("content-type")){
-        Serial.println(line);
-      }
     }
     // If can_break is true, find the end of headers and break
     else if(can_break){
@@ -446,53 +450,66 @@ header_resp Spotify::process_headers(){
 
   return response;
 }
-JsonDocument Spotify::process_response(header_resp header_data, JsonDocument filter){
+JsonDocument Spotify::process_response(header_resp header_data, JsonDocument filter) {
   JsonDocument response;
-  size_t recv_bytes = 0;
-  if(_debug_on){
-    Serial.printf("Filter: %s\n", filter.isNull() ? "Off" : "On");
-  }
-  if(!_client.connected() || header_data.content_type.indexOf("application/json") == -1 || header_data.http_code == -1){
-    if(header_data.http_code == 204){
-      response["message"] = "No Content";
-    }else if(header_data.http_code == -1){
-      response["message"] = header_data.error;
-    }else if(!_client.connected()){
-      response["message"] = "Client got disconnected";
-    }else{
-      String response_str = "";
-      while (_client.connected() && recv_bytes < header_data.content_length){
-        recv_bytes += _client.available();
-        response_str += _client.readStringUntil('\n') + "\n";
-      }
-      response["message"] = response_str;
-    }
+  SPOTIFY_LOGD(_TAG, "Filter: %s", filter.isNull() ? "Off" : "On");
+
+  if (header_data.http_code == 204 || header_data.content_length == 0) {
+    response["message"] = "No Content";
     return response;
   }
-  while (recv_bytes < header_data.content_length){
-    recv_bytes += _client.available();
-    if (filter.isNull() || !valid_http_code(header_data.http_code)) {
-      DeserializationError err = deserializeJson(response, _client);
-      if(err && _debug_on){
-        Serial.printf("Error: %s\n", err.c_str());
+
+  if (header_data.http_code == -1) {
+    response["message"] = header_data.error.isEmpty() ? "Client disconnected" : header_data.error;
+    return response;
+  }
+
+  String raw_response = "";
+  size_t bytes_read = 0;
+  unsigned long start = millis();
+
+  while (bytes_read < header_data.content_length && millis() - start < _timeout) {
+    if (_client.available()) {
+      char buf[128];
+      int len = _client.readBytes(buf, min(sizeof(buf), header_data.content_length - bytes_read));
+      if (len > 0) {
+        raw_response += String(buf, len);
+        bytes_read += len;
+      } else if (len == 0) {
+        SPOTIFY_LOGV(_TAG, "No more data available, stopping read");
+        break;
       }
-      break;
-    } else if(!filter.isNull()) {
-      DeserializationError err = deserializeJson(response, _client, DeserializationOption::Filter(filter));
-      if(err && _debug_on){
-        Serial.printf("Error: %s\n", err.c_str());
-      }
-      break;
     }
   }
+
+  SPOTIFY_LOGV(_TAG, "Raw response body: '%s' (read %d/%d bytes)", raw_response.c_str(), bytes_read, header_data.content_length);
+
+  if (header_data.content_type.indexOf("application/json") != -1 && raw_response.length() > 0) {
+    DeserializationError err;
+    JsonDocument effective_filter;
+    if (!filter.isNull()) {
+      effective_filter = filter;
+      effective_filter["error"] = true;
+    }
+    if (effective_filter.isNull()) {
+      err = deserializeJson(response, raw_response);
+    } else {
+      err = deserializeJson(response, raw_response, DeserializationOption::Filter(effective_filter));
+    }
+    if (err) {
+      SPOTIFY_LOGE(_TAG, "Error parsing JSON: %s", err.c_str());
+      response["message"] = String("JSON parsing failed: ") + err.c_str();
+    }
+  } else {
+    response["message"] = raw_response.length() ? raw_response : "No Body";
+  }
+
   return response;
 }
-
 void Spotify::init_response(response* response_obj){
   response_obj -> status_code = -1;
   deserializeJson(response_obj -> reply, "If you see this, something went wrong");
 }
-
 char* Spotify::array_to_char(int size, const char** array, char* result) {
   result[0] = '\0';
   for (int i = 0; i < size; ++i) {
@@ -511,7 +528,14 @@ void Spotify::array_to_json_array(int size, const char** array, char* data, int 
   }
   serializeJson(json_array,data,data_size);
 }
-
+void Spotify::array_to_json_array_key(int size, const char** array, char* data, char* key, int data_size){
+  JsonDocument doc;
+  JsonArray json_array = doc[key].to<JsonArray>();
+  for (int i = 0; i<size; ++i) {
+    json_array.add(array[i]);
+  }
+  serializeJson(doc, data, data_size);
+}
 String Spotify::extract_endpoint(const char* url) {
   String urlStr(url);
   int startPos = urlStr.indexOf("https://api.spotify.com/v1/");
@@ -699,8 +723,9 @@ response Spotify::save_albums_for_current_user(int size, const char ** album_ids
   char url[40];
   snprintf(url, sizeof(url), "%sme/albums", _base_url);
   char payload[_max_char_size];
+  char key[] = "ids";
   int payload_size = 0;
-  array_to_json_array(size, album_ids, payload);
+  array_to_json_array_key(size, album_ids, payload, key);
   payload_size = strlen(payload);
 
   return RestApiPut(url, payload_size, payload);
@@ -709,9 +734,11 @@ response Spotify::remove_users_saved_albums(int size, const char ** album_ids){
   char url[40];
   snprintf(url, sizeof(url), "%sme/albums", _base_url);
   char payload[_max_char_size];
-  array_to_json_array(size, album_ids, payload);
-
-  return RestApiDelete(url, payload);
+  char key[] = "ids";
+  int payload_size = 0;
+  array_to_json_array_key(size, album_ids, payload, key);
+  payload_size = strlen(payload);
+  return RestApiDelete(url, payload_size, payload);
 }
 response Spotify::check_useres_saved_albums(int size, const char ** album_ids, JsonDocument filter){
   char url[_max_char_size];
@@ -762,12 +789,6 @@ response Spotify::get_artist_top_tracks(const char* artist_id, const char* count
   else{
     snprintf(url, sizeof(url), "%sartists/%s/top-tracks?country=%s", _base_url, artist_id, country);
   }
-
-  return RestApiGet(url, filter);
-}
-response Spotify::get_artist_related_artist(const char* artist_id, JsonDocument filter){
-  char url[100];
-  snprintf(url, sizeof(url), "%sartists/%s/related-artists", _base_url, artist_id);
 
   return RestApiGet(url, filter);
 }
@@ -899,8 +920,9 @@ response Spotify::save_episodes_for_current_user(int size, const char** episode_
   char url[40];
   snprintf(url, sizeof(url), "%sme/episodes", _base_url);
   char payload[_max_char_size];
+  char key[] = "ids";
   int payload_size = 0;
-  array_to_json_array(size, episode_ids, payload);
+  array_to_json_array_key(size, episode_ids, payload, key);
   payload_size = strlen(payload);
 
   return RestApiPut(url, payload_size, payload);
@@ -909,23 +931,16 @@ response Spotify::remove_episodes_for_current_user(int size, const char** episod
   char url[40];
   snprintf(url, sizeof(url), "%sme/episodes", _base_url);
   char payload[_max_char_size];
-  array_to_json_array(size, episode_ids, payload);
-
-  return RestApiDelete(url, payload);
+  char key[] = "ids";
+  int payload_size = 0;
+  array_to_json_array_key(size, episode_ids, payload, key);
+  payload_size = strlen(payload);
+  return RestApiDelete(url, payload_size, payload);
 }
 response Spotify::check_users_saved_episodes(int size, const char** episode_ids, JsonDocument filter){
   char url[_max_char_size];
   char arr[_max_char_size];
   snprintf(url, sizeof(url), "%sme/episodes/contains?ids=%s", _base_url, array_to_char(size, episode_ids, arr));
-
-  return RestApiGet(url, filter);
-}
-#endif
-#ifndef DISABLE_GENRES
-//Genres
-response Spotify::get_available_genre_seeds(JsonDocument filter){
-  char url[70];
-  snprintf(url, sizeof(url), "%srecommendations/available-genre-seeds", _base_url);
 
   return RestApiGet(url, filter);
 }
@@ -1014,28 +1029,45 @@ response Spotify::update_playlist_items(const char* playlist_id, int size, const
 response Spotify::add_items_to_playlist(const char* playlist_id, int size, const char ** uris, int position) {
   char url[100];
   snprintf(url, sizeof(url), "%splaylists/%s/tracks", _base_url,  playlist_id);
-  
+  char data[_max_char_size];
+  int data_size = 0;
   JsonDocument doc;
-  char arr[_max_char_size];
-  array_to_json_array(size, uris, arr);
-  doc["uris"] = arr;
+  JsonArray json_array = doc["uris"].to<JsonArray>();
+  for (int i = 0; i<size; ++i) {
+    json_array.add(uris[i]);
+  }
   doc["position"] = position;
+  serializeJson(doc, data);
+  data_size = strlen(data);
+  serializeJson(doc, data, data_size);
 
   char payload[_max_char_size];
   int payload_size = 0;
   serializeJson(doc, payload);
   payload_size = strlen(payload);
-
   return RestApiPost(url, payload_size, payload);
 }
 response Spotify::remove_playlist_items(const char* playlist_id, int size, const char** uris) { 
   char url[100];
   snprintf(url, sizeof(url), "%splaylists/%s/tracks", _base_url, playlist_id);
-  char arr[_max_char_size];
-  char* payload = array_to_char(size, uris, arr);
-  
-  
-  return RestApiDelete(url, payload);
+  char data[_max_char_size];
+  int data_size = 0;
+  JsonDocument doc;
+  JsonArray json_array = doc["tracks"].to<JsonArray>();
+  for (int i = 0; i<size; ++i) {
+    JsonDocument uri;
+    uri["uri"] = uris[i];
+    json_array.add(uri);
+  }
+  serializeJson(doc, data);
+  data_size = strlen(data);
+  serializeJson(doc, data, data_size);
+
+  char payload[_max_char_size];
+  int payload_size = 0;
+  serializeJson(doc, payload);
+  payload_size = strlen(payload);
+  return RestApiDelete(url, payload_size, payload);
 }
 response Spotify::get_current_users_playlists(int limit, int offset, JsonDocument filter) {
   char url[100];
@@ -1068,49 +1100,6 @@ response Spotify::create_playlist(const char* user_id, const  char* name, bool i
   payload_size = strlen(payload);
 
   return RestApiPost(url, payload_size, payload);
-}
-response Spotify::get_featured_playlists(int limit, int offset, const char* timestamp, const char* country, const char* locale, JsonDocument filter) {
-    char url[200];
-    if (timestamp) {
-        if (!country && !locale) {
-            snprintf(url, sizeof(url), "%sbrowse/featured-playlists?timestamp=%s&limit=%d&offset=%d", _base_url, timestamp, limit, offset);
-        }
-        else if (!country && locale) {
-            snprintf(url, sizeof(url), "%sbrowse/featured-playlists?locale=%s&timestamp=%s&limit=%d&offset=%d", _base_url, locale, timestamp, limit, offset);
-        }
-        else if (country && !locale) {
-            snprintf(url, sizeof(url), "%sbrowse/featured-playlists?country=%s&timestamp=%s&limit=%d&offset=%d", _base_url, country, timestamp, limit, offset);
-        }
-        else {
-            snprintf(url, sizeof(url), "%sbrowse/featured-playlists?country=%s&locale=%s&timestamp=%s&limit=%d&offset=%d", _base_url, country, locale, timestamp, limit, offset);
-        }
-    }
-    else {
-        if (!country && !locale) {
-            snprintf(url, sizeof(url), "%sbrowse/featured-playlists?limit=%d&offset=%d", _base_url, limit, offset);
-        }
-        else if (!country && locale) {
-            snprintf(url, sizeof(url), "%sbrowse/featured-playlists?locale=%s&limit=%d&offset=%d", _base_url, locale, limit, offset);
-        }
-        else if (country && !locale) {
-            snprintf(url, sizeof(url), "%sbrowse/featured-playlists?country=%s&limit=%d&offset=%d", _base_url, country, limit, offset);
-        }
-        else {
-            snprintf(url, sizeof(url), "%sbrowse/featured-playlists?country=%s&locale=%s&limit=%d&offset=%d", _base_url, country, locale, limit, offset);
-        }
-    }
-    return RestApiGet(url, filter);
-}
-response Spotify::get_category_playlists(const char* category_id, int limit, int offset, const char* country, JsonDocument filter) {
-  char url[200];
-  if(country == nullptr){
-    snprintf(url, sizeof(url), "%sbrowse/categories/%s/playlists?limit=%d&offset=%d", _base_url, category_id, limit, offset);
-  }
-  else{
-    snprintf(url, sizeof(url), "%sbrowse/categories/%s/playlists?country=%s&limit=%d&offset=%d", _base_url, category_id, country, limit, offset);
-  }
-
-  return RestApiGet(url, filter);
 }
 response Spotify::get_playlist_cover_image(const char* playlist_id, JsonDocument filter) {
   char url[100];
@@ -1225,9 +1214,10 @@ response Spotify::get_user_saved_tracks(int limit, int offset, JsonDocument filt
 response Spotify::save_tracks_for_current_user(int size, const char ** track_ids) {
   char url[40];
   snprintf(url, sizeof(url), "%sme/tracks", _base_url);
+  char key[] = "ids";
   char payload[_max_char_size];
   int payload_size = 0;
-  array_to_json_array(size, track_ids, payload);
+  array_to_json_array_key(size, track_ids, payload, key);
   payload_size = strlen(payload);
 
   return RestApiPut(url, payload_size, payload);
@@ -1236,9 +1226,12 @@ response Spotify::remove_user_saved_tracks(int size, const char ** track_ids) {
   char url[40];
   snprintf(url, sizeof(url), "%sme/tracks", _base_url);
   char payload[_max_char_size];
-  array_to_json_array(size, track_ids, payload);
+  char key[] = "ids";
+  int payload_size = 0;
+  array_to_json_array_key(size, track_ids, payload, key);
+  payload_size = strlen(payload);
 
-  return RestApiDelete(url, payload);
+  return RestApiDelete(url, payload_size, payload);
 }
 response Spotify::check_user_saved_tracks(int size, const char ** track_ids, JsonDocument filter) {
   char url[_max_char_size];
@@ -1246,204 +1239,6 @@ response Spotify::check_user_saved_tracks(int size, const char ** track_ids, Jso
   snprintf(url, sizeof(url), "%sme/tracks/contains?ids=%s", _base_url, array_to_char(size, track_ids, arr));
 
   return RestApiGet(url, filter);
-}
-response Spotify::get_tracks_audio_features(int size, const char ** track_ids, JsonDocument filter) {
-  char url[_max_char_size];
-  char arr[_max_char_size];
-  snprintf(url, sizeof(url), "%saudio-features?ids=%s", _base_url,array_to_char(size, track_ids, arr));
-
-  return RestApiGet(url, filter);
-}
-response Spotify::get_track_audio_features(const char* track_id, JsonDocument filter) {
-  char url[150];
-  snprintf(url, sizeof(url), "%saudio-features/%s", _base_url,track_id);
-
-  return RestApiGet(url, filter);
-}
-response Spotify::get_track_audio_analysis(const char* track_id, JsonDocument filter) {
-  char url[150];
-  snprintf(url, sizeof(url), "%saudio-analysis/%s", _base_url, track_id);
-  return RestApiGet(url, filter);
-}
-response Spotify::get_recommendations(recommendations& recom, int limit, JsonDocument filter){
-  char url[2000];
-  snprintf(url, sizeof(url), "%srecommendations?limit=%d", _base_url, limit);
-
-  std::map<const char*, char*> char_params;
-  std::map<const char*, float> float_params;
-  populate_float_values(float_params, recom);
-  populate_char_values(char_params, recom); 
-
-  for (const auto& param : char_params) {
-    char value[100];
-    snprintf(value, sizeof(value), "&%s=%s",param.first, param.second);
-    strcat(url, value);
-  }
-  for(const auto& param : float_params){
-    char value[100];
-    snprintf(value, sizeof(value), "&%s=%f",param.first, param.second);
-    strcat(url, value);
-  }
-  return RestApiGet(url, filter);
-}
-bool Spotify::is_valid_value(float param) {
-  return param >= 0.0 && param <= 1.0;
-}
-bool Spotify::is_valid_value(int param) {
-  return param >0;
-}
-void Spotify::populate_float_values(std::map<const char*, float>& float_params, recommendations& recom){
-  if (is_valid_value(recom.min_acousticness)) {
-    float_params["min_acousticness"] = recom.min_acousticness;
-  }
-  if (is_valid_value(recom.max_acousticness)) {
-    float_params["max_acousticness"] = recom.max_acousticness;
-  }
-  if (is_valid_value(recom.target_acousticness)) {
-    float_params["target_acousticness"] = recom.target_acousticness;
-  }
-
-  if (is_valid_value(recom.min_danceability)) {
-    float_params["min_danceability"] = recom.min_danceability;
-  }
-  if (is_valid_value(recom.max_danceability)) {
-    float_params["max_danceability"] = recom.max_danceability;
-  }
-  if (is_valid_value(recom.target_danceability)) {
-    float_params["target_danceability"] = recom.target_danceability;
-  }
-
-  if (is_valid_value(recom.min_duration_ms)) {
-    float_params["min_duration_ms"] = recom.min_duration_ms;
-  }
-  if (is_valid_value(recom.max_duration_ms)) {
-    float_params["max_duration_ms"] = recom.max_duration_ms;
-  }
-  if (is_valid_value(recom.target_duration_ms)) {
-    float_params["target_duration_ms"] = recom.target_duration_ms;
-  }
-
-  if (is_valid_value(recom.min_energy)) {
-    float_params["min_energy"] = recom.min_energy;
-  }
-  if (is_valid_value(recom.max_energy)) {
-    float_params["max_energy"] = recom.max_energy;
-  }
-  if (is_valid_value(recom.target_energy)) {
-    float_params["target_energy"] = recom.target_energy;
-  }
-
-  if (is_valid_value(recom.min_instrumentalness)) {
-    float_params["min_instrumentalness"] = recom.min_instrumentalness;
-  }
-  if (is_valid_value(recom.max_instrumentalness)) {
-    float_params["max_instrumentalness"] = recom.max_instrumentalness;
-  }
-  if (is_valid_value(recom.target_instrumentalness)) {
-    float_params["target_instrumentalness"] = recom.target_instrumentalness;
-  }
-
-  if (is_valid_value(recom.min_key)) {
-    float_params["min_key"] = recom.min_key;
-  }
-  if (is_valid_value(recom.max_key)) {
-    float_params["max_key"] = recom.max_key;
-  }
-  if (is_valid_value(recom.target_key)) {
-    float_params["target_key"] = recom.target_key;
-  }
-
-  if (is_valid_value(recom.min_liveness)) {
-    float_params["min_liveness"] = recom.min_liveness;
-  }
-  if (is_valid_value(recom.max_liveness)) {
-    float_params["max_liveness"] = recom.max_liveness;
-  }
-  if (is_valid_value(recom.target_liveness)) {
-    float_params["target_liveness"] = recom.target_liveness;
-  }
-
-  if (is_valid_value(recom.min_loudness)) {
-    float_params["min_loudness"] = recom.min_loudness;
-  }
-  if (is_valid_value(recom.max_loudness)) {
-    float_params["max_loudness"] = recom.max_loudness;
-  }
-  if (is_valid_value(recom.target_loudness)) {
-    float_params["target_loudness"] = recom.target_loudness;
-  }
-
-  if (is_valid_value(recom.min_mode)) {
-    float_params["min_mode"] = recom.min_mode;
-  }
-  if (is_valid_value(recom.max_mode)) {
-    float_params["max_mode"] = recom.max_mode;
-  }
-  if (is_valid_value(recom.target_mode)) {
-    float_params["target_mode"] = recom.target_mode;
-  }
-
-  if (is_valid_value(recom.min_popularity)) {
-    float_params["min_popularity"] = recom.min_popularity;
-  }
-  if (is_valid_value(recom.max_popularity)) {
-    float_params["max_popularity"] = recom.max_popularity;
-  }
-  if (is_valid_value(recom.target_popularity)) {
-    float_params["target_popularity"] = recom.target_popularity;
-  }
-
-  if (is_valid_value(recom.min_speechiness)) {
-    float_params["min_speechiness"] = recom.min_speechiness;
-  }
-  if (is_valid_value(recom.max_speechiness)) {
-    float_params["max_speechiness"] = recom.max_speechiness;
-  }
-  if (is_valid_value(recom.target_speechiness)) {
-    float_params["target_speechiness"] = recom.target_speechiness;
-  }
-
-  if (is_valid_value(recom.min_tempo)) {
-    float_params["min_tempo"] = recom.min_tempo;
-  }
-  if (is_valid_value(recom.max_tempo)) {
-    float_params["max_tempo"] = recom.max_tempo;
-  }
-  if (is_valid_value(recom.target_tempo)) {
-    float_params["target_tempo"] = recom.target_tempo;
-  }
-
-  if (is_valid_value(recom.min_time_signature)) {
-    float_params["min_time_signature"] = recom.min_time_signature;
-  }
-  if (is_valid_value(recom.max_time_signature)) {
-    float_params["max_time_signature"] = recom.max_time_signature;
-  }
-  if (is_valid_value(recom.target_time_signature)) {
-    float_params["target_time_signature"] = recom.target_time_signature;
-  }
-
-  if (is_valid_value(recom.min_valence)) {
-    float_params["min_valence"] = recom.min_valence;
-  }
-  if (is_valid_value(recom.max_valence)) {
-    float_params["max_valence"] = recom.max_valence;
-  }
-  if (is_valid_value(recom.target_valence)) {
-    float_params["target_valence"] = recom.target_valence;
-  }
-}
-void Spotify::populate_char_values(std::map<const char*, char*>& char_params, recommendations& recom){
-  char arr[_max_char_size];
-  if(is_valid_value(recom.seed_artists_size)){
-    char_params["seed_artists"] = array_to_char(recom.seed_artists_size, recom.seed_artists, arr);
-  }
-  if(is_valid_value(recom.seed_genres_size)){
-    char_params["seed_genres"] = array_to_char(recom.seed_genres_size, recom.seed_genres, arr);
-  }
-  if(is_valid_value(recom.seed_tracks_size)){
-    char_params["seed_tracks"] = array_to_char(recom.seed_tracks_size, recom.seed_tracks,arr);
-  }
 }
 #endif
 #ifndef DISABLE_USER
@@ -1497,9 +1292,10 @@ response Spotify::get_followed_artists(const char* after, const char* type, int 
 response Spotify::follow_artists_or_users(const char* type,int size, const char** artist_user_ids) {
   char url[100];
   snprintf(url, sizeof(url), "%sme/following?type=%s", _base_url, type);
+  char key[] = "ids";
   char payload[_max_char_size];
   int payload_size = 0;
-  array_to_json_array(size, artist_user_ids, payload);
+  array_to_json_array_key(size, artist_user_ids, payload, key);
   payload_size = strlen(payload);
 
   return RestApiPut(url, payload_size, payload);
@@ -1507,10 +1303,13 @@ response Spotify::follow_artists_or_users(const char* type,int size, const char*
 response Spotify::unfollow_artists_or_users(const char* type, int size, const char** artist_user_ids) {
   char url[100];
   snprintf(url, sizeof(url), "%sme/following?type=%s", _base_url, type);
+  char key[] = "ids";
   char payload[_max_char_size];
-  array_to_json_array(size, artist_user_ids, payload);
+  int payload_size = 0;
+  array_to_json_array_key(size, artist_user_ids, payload, key);
+  payload_size = strlen(payload);
 
-  return RestApiDelete(url, payload);
+  return RestApiDelete(url, payload_size, payload);
 }
 response Spotify::check_if_user_follows_artists_or_users(const char* type, int size, const char** artist_user_ids, JsonDocument filter) {
   char url[_max_char_size];
@@ -1519,25 +1318,27 @@ response Spotify::check_if_user_follows_artists_or_users(const char* type, int s
 
   return RestApiGet(url, filter);
 }
-response Spotify::check_if_users_follow_playlist(const char* playlist_id, int size, const char** user_ids, JsonDocument filter) {
+response Spotify::check_if_current_user_follows_playlist(const char* playlist_id, JsonDocument filter) {
   char url[_max_char_size];
-  char arr[_max_char_size];
-  snprintf(url, sizeof(url), "%splaylists/%s/followers/contains?ids=%s", _base_url, playlist_id, array_to_char(size, user_ids, arr));
+  snprintf(url, sizeof(url), "%splaylists/%s/followers/contains", _base_url, playlist_id);
 
   return RestApiGet(url, filter);
 }
 #endif
 //Simplified functions, formatting functions
 #ifndef DISABLE_SIMPLIFIED
-String Spotify::get_current_album_image_url(int image_int){
-    String album_url = "Something went wrong";
-    JsonDocument filter;
-    filter["item"]["album"]["images"][image_int]["url"] = true;
-    response data = currently_playing(filter);
-    if(valid_http_code(data.status_code) && !data.reply.isNull()){
-      album_url = data.reply["item"]["album"]["images"][image_int]["url"].as<String>();
-    }
-    return album_url;
+String Spotify::get_current_album_image_url(int image_size_idx){
+  String album_url = "Something went wrong";
+  JsonDocument filter;
+  filter["item"]["album"]["images"] = true;
+  response data = currently_playing(filter);
+  if(valid_http_code(data.status_code) && !data.reply.isNull()){
+    JsonArray images = data.reply["item"]["album"]["images"].as<JsonArray>();
+    if (!images.isNull() && image_size_idx >= 0 && image_size_idx < images.size()) {
+      album_url = images[image_size_idx]["url"].as<String>();
+    } 
+  }
+  return album_url;
 }
 String Spotify::current_track_name(){
   String track_name = "Something went wrong";
@@ -1636,7 +1437,7 @@ char* Spotify::current_track_id(char * track_id){
 char* Spotify::current_artist_names(char * artist_names){
   JsonDocument filter;
   filter["item"]["artists"] = true;
-  response data = currently_playing();
+  response data = currently_playing(filter);
   if(valid_http_code(data.status_code) && !data.reply.isNull()){
     JsonArray array = data.reply["item"]["artists"];
     int len = array.size();
@@ -1683,8 +1484,8 @@ char* Spotify::convert_id_to_uri(const char* id, const char* type,char * uri){
 user_tokens Spotify::get_user_tokens(){
   user_tokens tokens;
   tokens.client_id = strdup(_client_id);
-  tokens.client_secret = strdup(_client_secret);
   tokens.refresh_token = strdup(_refresh_token);
+  tokens.client_secret = strdup(_client_secret);
   return tokens;
 }
 void print_response(response response_obj){

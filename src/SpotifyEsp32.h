@@ -8,7 +8,6 @@
 //#define DISABLE_CATEGORIES
 //#define DISABLE_CHAPTERS
 //#define DISABLE_EPISODES
-//#define DISABLE_GENRES
 //#define DISABLE_MARKETS
 //#define DISABLE_PLAYLISTS
 //#define DISABLE_SEARCH
@@ -16,23 +15,39 @@
 //#define DISABLE_TRACKS
 //#define DISABLE_USER
 //#define DISABLE_SIMPLIFIED
-//#define DISABLE_WEB_SERVER
+
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
-#include <base64.h>
+#include <esp_random.h>
+#include "mbedtls/sha256.h"
+#include "mbedtls/base64.h"
+
 
 #ifndef DISABLE_TRACKS
 #include <map>
 #endif
-#ifndef DISABLE_WEB_SERVER
-#include <WebServer.h>
-#endif
+
+typedef enum {
+  SPOTIFY_LOG_NONE = 0,
+  SPOTIFY_LOG_ERROR,
+  SPOTIFY_LOG_WARN,
+  SPOTIFY_LOG_INFO,
+  SPOTIFY_LOG_DEBUG,
+  SPOTIFY_LOG_VERBOSE
+} spotify_log_level_t;
+
+extern spotify_log_level_t _spotify_log_level;
+
+#define SPOTIFY_LOGV(tag, format, ...) do { if (_spotify_log_level >= SPOTIFY_LOG_VERBOSE) { Serial.printf("[%6lu][V][%s:%d][%s] " format "\n", millis(), __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__); } } while (0)
+#define SPOTIFY_LOGD(tag, format, ...) do { if (_spotify_log_level >= SPOTIFY_LOG_DEBUG) { Serial.printf("[%6lu][D][%s:%d][%s] " format "\n", millis(), __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__); } } while (0)
+#define SPOTIFY_LOGI(tag, format, ...) do { if (_spotify_log_level >= SPOTIFY_LOG_INFO) { Serial.printf("[%6lu][I][%s:%d][%s] " format "\n", millis(), __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__); } } while (0)
+#define SPOTIFY_LOGW(tag, format, ...) do { if (_spotify_log_level >= SPOTIFY_LOG_WARN) { Serial.printf("[%6lu][W][%s:%d][%s] " format "\n", millis(), __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__); } } while (0)
+#define SPOTIFY_LOGE(tag, format, ...) do { if (_spotify_log_level >= SPOTIFY_LOG_ERROR) { Serial.printf("[%6lu][E][%s:%d][%s] " format "\n", millis(), __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__); } } while (0)
 
 
-
-namespace Spotify_types {
+namespace spotify_types {
   extern bool SHUFFLE_ON;
   extern bool SHUFFLE_OFF;
   extern const char* REPEAT_OFF;
@@ -67,68 +82,20 @@ typedef struct{
   int status_code;
   JsonDocument reply;
 } response;
+/// @brief User token object containing user id, secret and refresh token
 typedef struct{
   const char* client_id;
   const char* client_secret;
   const char* refresh_token;
 } user_tokens;
+/// @brief HTTPS header object
 typedef struct{
   int http_code;
   size_t content_length;
   String content_type;
   String error;
 } header_resp;
-/// @brief Recommendation object, used to create recommendations
-struct recommendations {
-  const char** seed_artists;
-  int seed_artists_size = 0;
-  const char** seed_genres;
-  int seed_genres_size = 0;
-  const char** seed_tracks;
-  int seed_tracks_size = 0;
-  float min_acousticness = -1.0;
-  float max_acousticness = -1.0;
-  float target_acousticness = -1.0;
-  float min_danceability = -1.0;
-  float max_danceability = -1.0;
-  float target_danceability = -1.0;
-  float min_duration_ms = -1.0;
-  float max_duration_ms = -1.0;
-  float target_duration_ms = -1.0;
-  float min_energy = -1.0;
-  float max_energy = -1.0;
-  float target_energy = -1.0;
-  float min_instrumentalness = -1.0;
-  float max_instrumentalness = -1.0;
-  float target_instrumentalness = -1.0;
-  float min_key = -1.0;
-  float max_key = -1.0;
-  float target_key = -1.0;
-  float min_liveness = -1.0;
-  float max_liveness = -1.0;
-  float target_liveness = -1.0;
-  float min_loudness = -1.0;
-  float max_loudness = -1.0;
-  float target_loudness = -1.0;
-  float min_mode = -1.0;
-  float max_mode = -1.0;
-  float target_mode = -1.0;
-  float min_popularity = -1.0;
-  float max_popularity = -1.0;
-  float target_popularity = -1.0;
-  float min_speechiness = -1.0;
-  float max_speechiness = -1.0;
-  float target_speechiness = -1.0;
-  float min_tempo = -1.0;
-  float max_tempo = -1.0;
-  float target_tempo = -1.0;
-  float min_time_signature = -1.0;
-  float max_time_signature = -1.0;
-  float target_time_signature = -1.0;
-  float min_valence = -1.0;
-  float max_valence = -1.0;
-  float target_valence = -1.0;
-};
+
 
 /// @brief Print response object
 /// @param response_obj Response object to print
@@ -138,18 +105,14 @@ class Spotify {
     /// @brief Constructor for Spotify object without refresh token
     /// @param client_id Client id from Spotify, if you want to set it during runtime provide an empty char* with enough space 
     /// @param client_secret Client secret from Spotify, if you want to set it during runtime provide an empty char* with enough space 
-    /// @param server_port Port for the server to run on(default 80, if 80 is already used use anything above 1024)
-    /// @param debug_on Debug mode on or off(default off)
     /// @param max_num_retry Max number of retries for a request(default 3)
-    Spotify(const char* client_id, const char* client_secret, int server_port = 80, bool debug_on = false, int max_num_retry = 3);
+    Spotify(const char* client_id, const char * client_secret, int max_num_retry = 3);
     /// @brief Constructor for Spotify object with refresh token
     /// @param client_id Client id from Spotify, if you want to set it during runtime provide an empty char* with enough space 
-    /// @param client_secret Client secret from Spotify,if you want to set it during runtime provide an empty char* with enough space 
+    /// @param client_secret Client secret from Spotify, if you want to set it during runtime provide an empty char* with enough space 
     /// @param refresh_token Refresh token from Spotify, if you want to set it during runtime provide an empty char* with enough space 
-    /// @param server_port Port for the server to run on(default 80, if 80 is already used use anything above 1024)
-    /// @param debug_on Debug mode on or off(default off)
     /// @param max_num_retry Max number of retries for a request(default 3)
-    Spotify(const char* client_id, const char* client_secret, const char* refresh_token, int server_port = 80, bool debug_on = false, int max_num_retry = 3);
+    Spotify(const char* client_id, const char * client_secret, const char* refresh_token, int max_num_retry = 3);
     ~Spotify();
     /// @brief start the server and begin authentication
     void begin();
@@ -305,11 +268,6 @@ class Spotify {
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
     response get_artist_top_tracks(const char* artist_id, const char* country = nullptr, JsonDocument filter = JsonDocument());
-    /// @brief Get Spotify information about artists related to a single artist
-    /// @param artist_id Spotify ID of the artist
-    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
-    /// @return response object containing http status code and reply
-    response get_artist_related_artist(const char* artist_id, JsonDocument filter = JsonDocument());
     #endif
   #ifndef DISABLE_AUDIOBOOKS
     /// @brief Get Spotify information for a single audiobook(Only Available in US, UK, Canada, Ireland, New Zealand and Australia)
@@ -418,12 +376,6 @@ class Spotify {
     /// @return response object containing http status code and reply
     response check_users_saved_episodes(int size,  const char** episode_ids, JsonDocument filter = JsonDocument());
     #endif
-  #ifndef DISABLE_GENRES
-    /// @brief Get a list of available genre seeds for recommendations
-    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
-    /// @return response object containing http status code and reply
-    response get_available_genre_seeds(JsonDocument filter = JsonDocument());
-    #endif
   #ifndef DISABLE_MARKETS
     /// @brief Get a list of available markets for recommendations
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
@@ -504,19 +456,6 @@ class Spotify {
     /// @param timestamp A timestamp in ISO 8601 format: yyyy-MM-ddTHH:mm:ss if ommited current utc time is used
     /// @param country An ISO 3166-1 alpha-2 country code, Provide this to ensure that the category exists for a particular country.
     /// @param locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore, if ommited the response defaults to American English
-    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
-    /// @return response object containing http status code and reply
-    response get_featured_playlists( int limit = 10, int offset  = 0, const char* timestamp  = nullptr, const char* country = nullptr, const char* locale = nullptr, JsonDocument filter = JsonDocument());
-    /// @brief Get a list of Spotify playlists tagged with a particular category.
-    /// @param category_id Category ID can be got from get_several_browse_categories
-    /// @param limit The maximum number of items to return
-    /// @param offset The index of the first item to return
-    /// @param country The country: an ISO 3166-1 alpha-2 country code, Provide this to ensure that the category exists for a particular country.
-    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
-    /// @return response object containing http status code and reply
-    response get_category_playlists(const char* category_id, int limit = 10, int offset = 0, const char* country = nullptr, JsonDocument filter = JsonDocument());
-    /// @brief Get a cover image of a playlist
-    /// @param playlist_id Id of the playlist
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
     response get_playlist_cover_image(const char* playlist_id, JsonDocument filter = JsonDocument());
@@ -615,28 +554,6 @@ class Spotify {
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
     response check_user_saved_tracks(int size,  const char** track_ids, JsonDocument filter = JsonDocument());
-    /// @brief Get audio features for multiple tracks
-    /// @param size Number of track ids in track_ids array
-    /// @param track_ids Array of Spotify IDs of the tracks
-    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
-    /// @return response object containing http status code and reply
-    response get_tracks_audio_features(int size,  const char** track_ids, JsonDocument filter = JsonDocument());
-    /// @brief Get audio features for a single track
-    /// @param track_id Spotify ID of the track
-    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
-    /// @return response object containing http status code and reply
-    response get_track_audio_features(const char* track_id, JsonDocument filter = JsonDocument());
-    /// @brief Get audio analysis for a single track
-    /// @param track_id Spotify ID of the track
-    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
-    /// @return response object containing http status code and reply
-    response get_track_audio_analysis(const char* track_id, JsonDocument filter = JsonDocument());
-    /// @brief Get a list of new album releases featured in Spotify
-    /// @param recom Recommendation object containing atleast one seed
-    /// @param limit The maximum number of items to return
-    /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
-    /// @return response object containing http status code and reply
-    response get_recommendations(recommendations& recom, int limit = 10, JsonDocument filter = JsonDocument());
     #endif
   #ifndef DISABLE_USER    
     /// @brief Get detailed profile information about the current user (including the current user's username)
@@ -691,13 +608,11 @@ class Spotify {
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
     response check_if_user_follows_artists_or_users(const char* type, int size, const char** artist_user_ids, JsonDocument filter = JsonDocument());
-    /// @brief Check if users follow a playlist
+    /// @brief Check if current user follows a playlist
     /// @param playlist_id The ID of the playlist
-    /// @param size Number of user ids in user_ids array
-    /// @param user_ids Array of Spotify IDs of the users
     /// @param filter JsonDocument containing the fields to filter(Optional, returns all fields if not provided)
     /// @return response object containing http status code and reply
-    response check_if_users_follow_playlist(const char* playlist_id, int size, const char** user_ids, JsonDocument filter = JsonDocument());
+    response check_if_current_user_follows_playlist(const char* playlist_id, JsonDocument filter = JsonDocument());
     #endif
   #ifndef DISABLE_SIMPLIFIED
     /// @brief Get Current track name
@@ -737,7 +652,7 @@ class Spotify {
   /// @brief Get current album cover link
     /// @param int image array position
     /// @return Current album cover link as String
-    String get_current_album_image_url(int image_int);
+    String get_current_album_image_url(int image_size_idx);
     #endif
     /// @brief Convert ID to URI
     /// @param id ID to convert
@@ -766,28 +681,30 @@ class Spotify {
     bool get_refresh_token(const char* auth_code, const char* redirect_uri);
     /// @brief Destroy Object and free used memory
     void end();
+    /// @brief Set auth codes
+    /// @param scopes Char including the scopes seperated by a space
+    void set_scopes(const char* scopes);
+    /// @brief Set logging level
+    /// @param spotify_log_level Spotify debug level
+    void set_log_level(spotify_log_level_t spotify_log_level);
     
-
   private:
-  #ifndef DISABLE_WEB_SERVER
-    WebServer* _server;
-    /// @brief Root login Page
-    void server_on_root();
-    /// @brief Response from login page
-    void server_on_response();
-    /// @brief Refresh token login Page
-    void server_on_refresh();
-    /// @brief Currying function for refresh login page
-    friend std::function<void()> callback_fn_refresh(Spotify *spotify);
-    /// @brief Currying function for root login page
-    friend std::function<void()> callback_fn_root(Spotify *spotify);
-    /// @brief Currying function for root login page response
-    friend std::function<void()> callback_fn_response(Spotify *spotify);
-    /// @brief Sets up server routes  
-    void server_routes();
-  #else
-    void* _server;
-  #endif
+    static constexpr const char* _TAG = "Spotify";
+
+    /// @brief Redirect URI
+    const char* _redirect_uri = "https://spotifyesp32.vercel.app/api/spotify/callback";
+    /// @brief Lengths for state
+    static const int _state_len = 25;
+    /// @brief char array for state
+    char _random_state[_state_len + 1];
+    /// @brief Random state generator
+    /// @param state char array to store state
+    /// @param len length of char array
+    void get_random_state(char* state, size_t len);
+    /// @brief Host for Auth
+    const char* _auth_host = "spotifyesp32.vercel.app";
+    /// @brief Custom scopes
+    const char* _custom_scopes;
     /// @brief HTTPS client
     WiFiClientSecure _client;
     /// @brief Host for Tokens
@@ -798,8 +715,8 @@ class Spotify {
     const char* _token_host = "accounts.spotify.com";
     /// @brief Maximum number of items in one request
     static const int _max_num_items = 20;
-    /// @brief Maximum size of char array(35 been the size of a uri + comma + 150 as buffer for url etc.)
-    static const int _max_char_size = 35*_max_num_items + 150;
+    /// @brief Maximum size of char array(35 beeing the size of a uri + comma + 150 as buffer for url etc.)
+    static const int _max_char_size = 35 * _max_num_items + 150;
     /// @brief Size of a uri
     static const int _size_of_uri = 45;
     /// @brief Size of an id
@@ -808,24 +725,18 @@ class Spotify {
     bool _no_credentials = false;
     /// @brief Maximum number of items in one request
     int _max_num_retry = 3;
-    /// @brief Users set redirect uri
-    char _redirect_uri[100] = "";
     /// @brief Users refresh token
     char _refresh_token[300] = "";
     /// @brief user auth code
-    char _auth_code[800] = "";
+    char _auth_code[1024] = "";
     /// @brief Users set client id
     char _client_id[100] = "";
     /// @brief Users set client secret
     char _client_secret[100] = "";
     /// @brief Current number of retries
     int _retry;
-    /// @brief Timeout for HTTP etc. in Millisecods
-    int _timeout = 1000;
-    /// @brief Debug mode
-    bool _debug_on;
-    /// @brief port
-    int _port;
+    /// @brief Timeout in ms
+    int _timeout = 5000;
     /// @brief Access token
     char  _access_token[400]; 
     /// @brief Get Access Token with refresh token
@@ -833,8 +744,14 @@ class Spotify {
     bool get_token();
     /// @brief Sends base headers for token request
     /// @param payload Payload to send
+    /// @param payload_len Length of payload
     /// @return true if request was successful
-    bool token_base_req(String payload);
+    bool token_base_req(const char* payload, size_t payload_len);
+    /// @brief Sends base headers for token request using pkce
+    /// @param payload Payload to send
+    /// @param payload_len Length of payload
+    /// @return true if request was successful
+    bool token_base_req_pkce(const char* payload, size_t payload_len);
     /// @brief Checks if http code is valid
     /// @param code Http code to check
     /// @return True if code is valid
@@ -869,9 +786,10 @@ class Spotify {
     response RestApiPost(const char* rest_url, int payload_size = 0, const char* payload = nullptr);
     /// @brief Make DELETE request to Spotify API
     /// @param rest_url URL to make request to
+    /// @param payload_size Size of payload
     /// @param payload Payload to send
     /// @return Response object containing http status code and reply
-    response RestApiDelete(const char* rest_url, const char* payload = nullptr);
+    response RestApiDelete(const char* rest_url, int payload_size = 0, const char* payload = nullptr);
     /// @brief Make GET request to Spotify API
     /// @param rest_url URL to make request to
     /// @return Response object containing http status code and reply
@@ -889,33 +807,20 @@ class Spotify {
     /// @param data_size Size of data array
     /// @return Pointer to data array
     void array_to_json_array(int size, const char** array, char* data, int data_size = _max_char_size);
-    
-  #ifndef DISABLE_TRACKS
-    /// @brief Check if recommendation value is valid
-    /// @param param Float value to check
-    /// @return Bool if value is valid
-    bool is_valid_value(float param);
-    /// @brief Check if recommendation value is valid
-    /// @param param Int value to check
-    /// @return Bool if value is valid
-    bool is_valid_value(int param);
-    /// @brief Populate recommendation char values
-    /// @param map Map to populate
-    /// @param recom recommendation object
-    /// @return Void
-    void populate_char_values(std::map<const char*, char*>& map, recommendations& recom);
-    /// @brief Populate recommendation float values
-    /// @param map Map to populate
-    /// @param recom recommendation object
-    /// @return Void
-    void populate_float_values(std::map<const char*, float>& map, recommendations& recom);
-  #endif
+    /// @brief Convert array of chars to one json doc with an array with key
+    /// @param size Size of array
+    /// @param array Array to convert
+    /// @param data Array to store result
+    /// @param key Key for the array
+    /// @param data_size Size of data array
+    /// @return Pointer to data array
+    void array_to_json_array_key(int size, const char** array, char* data, char* key, int data_size = _max_char_size);
     /// @brief Extract endpoint from url with regex
     /// @param rest_url URL to extract endpoint from
     /// @return Endpoint
     String extract_endpoint(const char* rest_url);
     /// @brief Root CA for Spotify API
-    const char* _spotify_root_ca PROGMEM= \
+    const char* _spotify_root_ca PROGMEM = \
     "-----BEGIN CERTIFICATE-----\n"\
     "MIIEyDCCA7CgAwIBAgIQDPW9BitWAvR6uFAsI8zwZjANBgkqhkiG9w0BAQsFADBh\n"\
     "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n"\
@@ -944,36 +849,5 @@ class Spotify {
     "chDYABPPTHPbqjc1qCmBaZx2vN4Ye5DUys/vZwP9BFohFrH/6j/f3IL16/RZkiMN\n"\
     "JCqVJUzKoZHm1Lesh3Sz8W2jmdv51b2EQJ8HmA==\n"\
     "-----END CERTIFICATE-----\n";
-    const char* _credentials_input PROGMEM = R"=====(
-    <HTML>
-        <HEAD>
-            <TITLE>Enter Credentials</TITLE>
-        </HEAD>
-        <BODY>
-            <h1>Enter your Credentials</h1>
-            <p>If you don't have a refresh token leave empty</p>
-            <form action="/get">
-                Client ID: <input type="text" name="id">
-                <p></p>
-                Client Secret: <input type="text" name="secret">
-                <p></p>
-                Refreshtoken: <input type="text" name="token">
-                <input type="submit" value="Submit">
-            </form>
-        </BODY>
-    </HTML>)=====";
-    const char* _login_page PROGMEM = R"=====(
-    <HTML>
-      <HEAD>
-        <TITLE>ESP Spotify Login</TITLE>
-      </HEAD>
-      <BODY>
-        <CENTER>
-          <H1>Spotify Login</H1>
-          <a href="https://accounts.spotify.com/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=ugc-image-upload playlist-read-collaborative playlist-modify-private playlist-modify-public playlist-read-private user-read-playback-position user-read-recently-played user-top-read user-modify-playback-state user-read-currently-playing user-read-playback-state user-read-private user-read-email user-library-modify user-library-read user-follow-modify user-follow-read streaming app-remote-control">Log in to spotify</a>
-        </CENTER>
-      </BODY>
-    </HTML>
-    )=====";
 };
 #endif

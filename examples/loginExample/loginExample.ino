@@ -6,6 +6,10 @@
     24.03.2024
     Created by: Finian Landes
 
+    11.10.2025
+    edited by: Finian Landes
+        * Updated login to work with version 2.x.x
+
     Documentation: https://github.com/FinianLandes/Spotify_Esp32
 */
 // Include the required libraries
@@ -25,11 +29,13 @@ Spotify sp(CLIENT_ID, CLIENT_SECRET);
 void setup() {
     Serial.begin(115200);
     connect_to_wifi();
+    // Uncomment following line if you want to enable debugging:
+    // sp.set_log_level(SPOTIFY_LOG_DEBUG);
     sp.begin();
     while(!sp.is_auth()){
         sp.handle_client();
     }
-    Serial.println("Authenticated");
+    Serial.printf("Authenticated! Refresh token: %s\n", sp.get_user_tokens().refresh_token);
 }
 
 void loop() {
