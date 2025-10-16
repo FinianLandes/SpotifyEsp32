@@ -12,7 +12,7 @@ The authetication process has changed to comply with the new spotify guidelines.
 
 ## Setup
 
- **[YouTube Tutorial v3](vvvv)**
+ **[YouTube Tutorial v3](https://youtu.be/Yy75KzIfqi4)**
 
 ### 1. Create a Spotify Application
 
