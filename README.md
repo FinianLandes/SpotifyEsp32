@@ -8,7 +8,7 @@ The authetication process has changed to comply with the new spotify guidelines.
 ## Dependencies
 
 - [ArduinoJson](https://arduinojson.org/)  
-- [WiFiClientSecure](https://github.com/espressif/arduino-esp32/tree/master/libraries/WiFiClientSecure)
+- [WiFiClientSecure](https://github.com/espressif/arduino-esp32/tree/release/v2.x/libraries/WiFiClientSecureh) *(Note: In Arduino-ESP32 v3.x, `WiFiClientSecure` is a compatibility alias for `NetworkClientSecure`. This library uses `WiFiClientSecure` to ensure full compatibility with **PlatformIO**, where v3.x support is still unavailable.)*
 
 ## Setup
 
