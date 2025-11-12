@@ -97,7 +97,7 @@ To reduce memory usage, GET requests support **filtered responses** ([Filter tut
 ```cpp
 JsonDocument filter;
 filter["item"]["name"] = true;
-auto res = sp.get_current_playback(filter);
+response res = sp.get_current_playback(filter);
 ```
 
 See the [Spotify Web API Reference](https://developer.spotify.com/documentation/web-api/reference/) for all the possible endpoints.
