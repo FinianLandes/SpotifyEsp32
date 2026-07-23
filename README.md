@@ -2,17 +2,17 @@
 
 This library is a wrapper for the [Spotify Web API](https://developer.spotify.com/documentation/web-api/) designed to work with the [ESP32](https://www.espressif.com/en/products/socs/esp32/overview) microcontroller.
 
-⚠️ **Version 3 Notice:** This release may not be backward compatible with v2.x.x
-The authetication process has changed to comply with the new spotify guidelines.
+⚠️ **Version 4 Notice:** This release may not be backward compatible with v3.x.x
+Some of the API endpoints were removed or renamed, to fully align with the new API provided by Spotify ([Spotify API update Blog](https://developer.spotify.com/blog/2026-02-06-update-on-developer-access-and-platform-security)).
 
 ## Dependencies
 
 - [ArduinoJson](https://arduinojson.org/)  
-- [WiFiClientSecure](https://github.com/espressif/arduino-esp32/tree/release/v2.x/libraries/WiFiClientSecureh) *(Note: In Arduino-ESP32 v3.x, `WiFiClientSecure` is a compatibility alias for `NetworkClientSecure`. This library uses `WiFiClientSecure` to ensure full compatibility with **PlatformIO**, where v3.x support is still unavailable.)*
+- [WiFiClientSecure](https://github.com/espressif/arduino-esp32/tree/release/v2.x/libraries/WiFiClientSecure) *(Note: In Arduino-ESP32 v3.x, `WiFiClientSecure` is a compatibility alias for `NetworkClientSecure`. This library uses `WiFiClientSecure` to ensure full compatibility with **PlatformIO**, where v3.x support is still unavailable.)*
 
 ## Setup
 
- **[YouTube Tutorial v3](https://youtu.be/Yy75KzIfqi4)**
+ **[YouTube authentication Tutorial for v3 & v4](https://youtu.be/Yy75KzIfqi4)**
 
 ### 1. Create a Spotify Application
 
@@ -107,21 +107,12 @@ See the [Spotify Web API Reference](https://developer.spotify.com/documentation/
 To reduce flash usage, disable unneeded endpoints by defining macros before including the library:
 
 ```c++
-#define DISABLE_PLAYER
-#define DISABLE_ALBUM
-#define DISABLE_ARTIST
-#define DISABLE_AUDIOBOOKS
-#define DISABLE_CATEGORIES
-#define DISABLE_CHAPTERS
-#define DISABLE_EPISODES
-#define DISABLE_GENRES
-#define DISABLE_MARKETS
-#define DISABLE_PLAYLISTS
-#define DISABLE_SEARCH
-#define DISABLE_SHOWS
-#define DISABLE_TRACKS
-#define DISABLE_USER
-#define DISABLE_SIMPLIFIED
+#define DISABLE_LIBRARY         //Saved items & followed artists
+#define DISABLE_PLAYLISTS       //Playlist management
+#define DISABLE_METADATA        //Albums, artists, search, shows, tracks
+#define DISABLE_PLAYER          //Playback control
+#define DISABLE_USER            //Profile & top items
+#define DISABLE_SIMPLIFIED      //Helper convenience functions
 ```
 
 ## Helper Functions
@@ -144,7 +135,6 @@ bool is_playing();
 bool volume_modifyable();
 
 // URI helpers
-char  convert_id_to_uri(char* id, char* type);
 char* convert_id_to_uri(char* id, char* type, char* uri);
 
 // Current album artwork url
@@ -199,26 +189,48 @@ The library provides the following logging options to control output verbosity:
 
 The default logging level is `SPOTIFY_LOG_NONE`, meaning no logs are generated unless explicitly enabled.
 
-## Memory and Flash usage
+## Asynchronous Spotify API Calls
 
-Because this library uses WiFi and HTTPS, it requires more flash memory than a typical ESP32 sketch.
-You may need to increase the application partition size (above the default 1.2 MB).
+The library supports running Spotify API calls asynchronously using FreeRTOS. This allows your main loop to continue without waiting for a request to finish.
 
-- [Official Espressif Documentation](https://espressif-docs.readthedocs-hosted.com/projects/arduino-esp32/en/latest/tutorials/partition_table.html?highlight=partitions)
-- [Partition Table in the Arduino IDE](https://robotzero.one/arduino-ide-partitions/)
-- [Partition Table in Platform IO](https://docs.platformio.org/en/latest/platforms/espressif32.html)
+### Usage
 
-If flash space is limited, disable unused endpoints.
+Define a callback to handle the response:
+
+```cpp
+void handle_callback(response resp) {
+    print_response(resp); // Handle your response e.g. print it.
+}
+```
+
+Wrap your API call in a lambda and pass it to `async()` along with the callback:
+
+```cpp
+// Example: call a function with arguments
+sp.async([&]() {
+    return sp.get_playlist_items(0, 50, filter_doc);
+}, handle_callback);
+
+// Example: call a function with no arguments
+sp.async([&]() {
+    return sp.get_users_saved_albums();
+}, handle_callback);
+```
+
+Notes:
+
+- Any arguments must be captured or bound inside the lambda.
+- The callback receives the response object once the async task completes.
+- Each async call runs on a separate FreeRTOS task, with a stack size of 8192 bytes by default.
 
 ## Troubleshooting
 
-- Enable debug mode by passing `true` as second last argument to the constructor.
+- Enable debug mode using the above mentioned function `set_log_level`.
 - If requests fail, inspect the returned response or Serial output.
 - Test individual endpoints in the [Spotify Web API Console](https://developer.spotify.com/console/). </br>
-- Still having issues? Open an issue in this repository.
+- Still having issues? Open an issue in this repository. Or contact me via email.
 
 ## Supported Devices
 
 - ESP32 WROOM
 - Should also work on other ESP32 models.
-- For now it probably uses too much flash and memory to run on a standard ESP2866
