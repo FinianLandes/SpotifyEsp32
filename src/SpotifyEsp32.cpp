@@ -112,14 +112,36 @@ void Spotify::begin(){
 }
 
 void Spotify::handle_client(){
+  if (is_auth()) return;
+
   static unsigned long start_time = 0;
+  static unsigned long last_poll_time = 0;
+  static unsigned long auth_start_time = 0;
   static bool connecting = false;
   static size_t pos = 0;
   static bool headers_parsed = false;
   static size_t content_length = 0;
   static char buffer[2048];
 
+  if (auth_start_time == 0) {
+    auth_start_time = millis();
+  }
+
+  if (millis() - auth_start_time > _auth_timout) {
+    SPOTIFY_LOGE(_TAG, "Authentication timed out waiting for user.");
+    _client.stop();
+    _client.setCACert(_spotify_root_ca);
+    connecting = false;
+    auth_start_time = 0;
+    return;
+  }
+
   if (!connecting) {
+    if (millis() - last_poll_time < _auth_poll_interval) {
+      return; 
+    }
+    last_poll_time = millis();
+
     SPOTIFY_LOGD(_TAG, "Starting connection to host: %s", _auth_host);
 
     _client.setInsecure();
@@ -350,7 +372,7 @@ bool Spotify::token_base_req(const char* payload, size_t payload_len){
 
 bool Spotify::get_refresh_token(const char* auth_code, const char* redirect_uri){
   bool reply = false;
-  char payload[1024];
+  char payload[2048];
   snprintf(payload, sizeof(payload), "grant_type=authorization_code&code=%s&redirect_uri=%s", auth_code, redirect_uri);
 
   if (!token_base_req(payload, strlen(payload))) {
@@ -392,7 +414,7 @@ bool Spotify::get_token() {
     return false;
   }
 
-  if (!token_base_req(payload, strlen(payload))) {    
+  if (!token_base_req(payload, strlen(payload))) {
     SPOTIFY_LOGE(_TAG, "Access token connection failed");
     _client.stop();
     return false;
@@ -507,8 +529,10 @@ JsonDocument Spotify::process_response(header_resp header_data, JsonDocument fil
   }
 
   SPOTIFY_LOGV(_TAG, "Raw response body: '%s' (read %d/%d bytes)", raw_response.c_str(), bytes_read, header_data.content_length);
+  bool is_json_header = header_data.content_type.indexOf("application/json") != -1;
+  bool looks_like_json = raw_response.startsWith("{") || raw_response.startsWith("[");
 
-  if (header_data.content_type.indexOf("application/json") != -1 && raw_response.length() > 0) {
+  if ((is_json_header || looks_like_json) && raw_response.length() > 0) {
     DeserializationError err;
     JsonDocument effective_filter;
     if (!filter.isNull()) {

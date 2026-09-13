@@ -553,10 +553,10 @@ class Spotify {
     static constexpr const char* _TAG = "Spotify";
 
     /// @brief OAuth redirect URI registered in the Spotify Developer Dashboard.
-    const char* _redirect_uri = "https://spotifyesp32.vercel.app/api/spotify/callback";
+    const char* _redirect_uri = "https://spesp32.finianlandes.workers.dev/api/spotify/callback";
 
     /// @brief OAuth authorization host.
-    const char* _auth_host = "spotifyesp32.vercel.app";
+    const char* _auth_host = "spesp32.finianlandes.workers.dev";
 
     /// @brief Spotify Web API host.
     const char* _host = "api.spotify.com";
@@ -600,6 +600,12 @@ class Spotify {
 
     /// @brief Request timeout in milliseconds.
     int _timeout = 5000;
+
+    /// @brief Total time user has to authenticate.
+    int _auth_timout = 120000;
+
+    /// @brief Poll interval to stop excessive invocations of the Vercel Server.
+    int _auth_poll_interval = 3000;
 
     /// @brief User refresh token.
     char _refresh_token[300] = "";

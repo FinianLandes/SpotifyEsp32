@@ -2,6 +2,9 @@
 
 This library is a wrapper for the [Spotify Web API](https://developer.spotify.com/documentation/web-api/) designed to work with the [ESP32](https://www.espressif.com/en/products/socs/esp32/overview) microcontroller.
 
+⚠️ **Version 5 Notice:** This release may not be backward compatible with v4.x.x
+Due to changes in the authentication backend from vercel to cloudflare workers switching to version 5 requires the user to set a different redirect uri in the Developer Dashboard for new authentications. Applications using a refresh token generated using the vercel backend should still run fine tough.
+
 ⚠️ **Version 4 Notice:** This release may not be backward compatible with v3.x.x
 Some of the API endpoints were removed or renamed, to fully align with the new API provided by Spotify ([Spotify API update Blog](https://developer.spotify.com/blog/2026-02-06-update-on-developer-access-and-platform-security)).
 
@@ -18,7 +21,7 @@ Some of the API endpoints were removed or renamed, to fully align with the new A
 
 1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications).
 2. Create a new application and copy your **Client ID** and **Client Secret**.
-3. Add the following redirect URI: <https://spotifyesp32.vercel.app/api/spotify/callback>
+3. Add the following redirect URI: <https://spesp32.finianlandes.workers.dev/api/spotify/callback>
 4. Enable the **Web API** option.
 
 ### 2. Example: Login without a saved refresh token
@@ -191,7 +194,9 @@ The default logging level is `SPOTIFY_LOG_NONE`, meaning no logs are generated u
 
 ## Asynchronous Spotify API Calls
 
+### ⚠️ This feature is not working well and i don't have the capacity to fix it at the moment. Feel free to create a PR if you want to fix it
 The library supports running Spotify API calls asynchronously using FreeRTOS. This allows your main loop to continue without waiting for a request to finish.
+
 
 ### Usage
 
