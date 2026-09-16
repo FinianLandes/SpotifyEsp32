@@ -101,9 +101,9 @@ void Spotify::begin(){
 
     Serial.println("Open this URL in your browser to authorize:");
     Serial.println(url);
-  }
-  SPOTIFY_LOGD(_TAG, "Setting Spotify CA certificate & Timeout");
-  _client.setCACert(_spotify_root_ca);
+  }  
+  SPOTIFY_LOGD(_TAG, "Setting Spotify CA certificate & Timeout (Currently Running token requests without CA Cert in Insecure Mode)");
+  _client.setInsecure();
   _client.setTimeout(_timeout);
   SPOTIFY_LOGI(_TAG, "Spotify client initialized.");
   if (is_auth()){
@@ -342,7 +342,7 @@ response Spotify::RestApiDelete(const char* rest_url, int payload_size, const ch
   return RestApi(rest_url, "DELETE", payload_size, payload);
 }
 
-bool Spotify::token_base_req(const char* payload, size_t payload_len){
+bool Spotify::token_base_req(const char* payload, size_t payload_len) {
   if (!_client.connect(_token_host, 443)) {
     SPOTIFY_LOGE(_TAG, "Faild to connect to host for token request");
     return false;
@@ -352,7 +352,7 @@ bool Spotify::token_base_req(const char* payload, size_t payload_len){
   char auth_base64[192];
   size_t out_len = 0;
   int ret = mbedtls_base64_encode((unsigned char*)auth_base64, sizeof(auth_base64), &out_len, (const unsigned char*)auth_raw, strlen(auth_raw));
-  auth_base64[strlen(auth_base64)] = '\0';
+  auth_base64[out_len] = '\0';
 
   _client.println("POST /api/token HTTP/1.1");
   _client.println("Host: " + String(_token_host));
@@ -371,19 +371,22 @@ bool Spotify::token_base_req(const char* payload, size_t payload_len){
 }
 
 bool Spotify::get_refresh_token(const char* auth_code, const char* redirect_uri){
+  _client.setInsecure();
   bool reply = false;
-  char payload[2048];
+  char payload[1024];
   snprintf(payload, sizeof(payload), "grant_type=authorization_code&code=%s&redirect_uri=%s", auth_code, redirect_uri);
 
   if (!token_base_req(payload, strlen(payload))) {
     SPOTIFY_LOGE(_TAG, "Refresh token connection failed");
     _client.stop();
+    _client.setCACert(_spotify_root_ca);
     return false;
   }
 
   header_resp header_data = process_headers();
   if (header_data.http_code == -1) {
     _client.stop();
+    _client.setCACert(_spotify_root_ca);
     SPOTIFY_LOGE(_TAG, "Refresh token header processing failed");
     return false;
   }
@@ -403,26 +406,31 @@ bool Spotify::get_refresh_token(const char* auth_code, const char* redirect_uri)
   SPOTIFY_LOGD(_TAG, "Reply: %s", str_response.c_str());
 
   _client.stop();
+  _client.setCACert(_spotify_root_ca);
   return reply;
 }
 
 bool Spotify::get_token() {
+  _client.setInsecure();
   bool reply = false;
   char payload[860];
   int written = snprintf(payload, sizeof(payload), "grant_type=refresh_token&refresh_token=%s", _refresh_token);
   if (written < 0 || written >= (int)sizeof(payload)) {
+    _client.setCACert(_spotify_root_ca);
     return false;
   }
 
   if (!token_base_req(payload, strlen(payload))) {
     SPOTIFY_LOGE(_TAG, "Access token connection failed");
     _client.stop();
+    _client.setCACert(_spotify_root_ca);
     return false;
   }
   header_resp header_data = process_headers();
   if(header_data.http_code == -1){
     SPOTIFY_LOGE(_TAG, "Access token invalid or empty headers received");
     _client.stop();
+    _client.setCACert(_spotify_root_ca);
     return false;
   }
   JsonDocument filter;
@@ -437,6 +445,7 @@ bool Spotify::get_token() {
   SPOTIFY_LOGD(_TAG, "POST \"access token\" Status: %i", header_data.http_code);
   SPOTIFY_LOGD(_TAG, "Reply: %s", str_response.c_str());
   _client.stop();
+  _client.setCACert(_spotify_root_ca);
   return reply;
 }
 
